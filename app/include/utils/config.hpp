@@ -239,6 +239,9 @@ public:
     /// Stremio only: addon transport URLs of the active server (manifest URLs).
     /// Empty for other backends / when not logged in.
     const std::vector<std::string>& getStremioAddons() const;
+    /// Stremio only: replace the active server's addon list (after an account
+    /// collection re-sync) and persist. No-op when unchanged or not logged in.
+    void setStremioAddons(const std::vector<std::string>& addons);
     /// Active media backend (built lazily from the active server's type).
     /// The UI talks to this; it never formats a provider URL itself.
     media::Backend& backend();

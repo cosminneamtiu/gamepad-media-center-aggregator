@@ -587,6 +587,17 @@ const std::vector<std::string>& AppConfig::getStremioAddons() const {
     return empty;
 }
 
+void AppConfig::setStremioAddons(const std::vector<std::string>& addons) {
+    if (this->user == this->users.end()) return;
+    for (auto& s : this->servers) {
+        if (s.id != this->user->server_id) continue;
+        if (s.addons == addons) return;  // no disk write when nothing changed
+        s.addons = addons;
+        this->save();
+        return;
+    }
+}
+
 bool AppConfig::checkLogin() {
     auto is_user = [this](const AppUser& u) { return u.id == this->user_id; };
     this->user = std::find_if(this->users.begin(), this->users.end(), is_user);

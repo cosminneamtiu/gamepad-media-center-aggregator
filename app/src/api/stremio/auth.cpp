@@ -72,17 +72,23 @@ Account login(const std::string& email, const std::string& password) {
     if (a.userId.empty()) a.userId = email;
 
     // 2. Addon collection -> remote transport URLs (skip local addons).
-    nlohmann::json collBody = {{"authKey", a.authKey}, {"update", true}};
-    nlohmann::json coll = postEnvelope(base + "/api/addonCollectionGet", collBody);
+    a.addons = fetchAddonCollection(a.authKey);
+
+    return a;
+}
+
+std::vector<std::string> fetchAddonCollection(const std::string& authKey) {
+    nlohmann::json body = {{"authKey", authKey}, {"update", true}};
+    nlohmann::json coll = postEnvelope("https://api.strem.io/api/addonCollectionGet", body);
+    std::vector<std::string> out;
     if (coll.contains("addons") && coll["addons"].is_array()) {
         for (auto& d : coll["addons"]) {
             std::string transportUrl = jstr(d, "transportUrl");
             if (transportUrl.empty() || isLocalAddon(transportUrl)) continue;
-            a.addons.push_back(transportUrl);
+            out.push_back(transportUrl);
         }
     }
-
-    return a;
+    return out;
 }
 
 std::string nowIso() {

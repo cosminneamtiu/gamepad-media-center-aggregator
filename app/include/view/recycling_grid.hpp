@@ -271,6 +271,16 @@ public:
     void draw(NVGcontext* vg, float x, float y, float width, float height, brls::Style style,
         brls::FrameContext* ctx) override;
 
+protected:
+    /// Pulsing shimmer gradient anchored to the cell's own draw rect. Shared
+    /// by every skeleton shape — the generic block/card below, and any
+    /// screen-specific skeleton (e.g. the album header/track rows in
+    /// media_music.cpp) — so all loading placeholders animate in sync.
+    NVGpaint shimmerPaint(NVGcontext* vg, float x, float y, float width, float height);
+
+    /// One shimmering rounded-rect bar painted with `shimmerPaint`.
+    static void bar(NVGcontext* vg, NVGpaint paint, float x, float y, float w, float h, float radius);
+
 private:
     NVGcolor background = brls::Application::getTheme()["color/grey_3"];
 };

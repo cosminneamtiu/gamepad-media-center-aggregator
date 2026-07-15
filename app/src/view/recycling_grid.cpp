@@ -31,8 +31,7 @@ SkeletonCell::SkeletonCell() { this->setFocusable(false); }
 
 RecyclingGridItem* SkeletonCell::create() { return new SkeletonCell(); }
 
-void SkeletonCell::draw(
-    NVGcontext* vg, float x, float y, float width, float height, brls::Style style, brls::FrameContext* ctx) {
+NVGpaint SkeletonCell::shimmerPaint(NVGcontext* vg, float x, float y, float width, float height) {
     brls::Time curTime = brls::getCPUTimeUsec() / 1000;
     float p = (curTime % 1000) * 1.0 / 1000;
     p = std::fabs(0.5 - p) + 0.25;
@@ -40,27 +39,33 @@ void SkeletonCell::draw(
     NVGcolor end = background;
     end.a = p;
 
-    NVGpaint paint = nvgLinearGradient(vg, x, y, x + width, y + height, a(background), a(end));
-    auto bar = [&](float bx, float by, float bw, float bh, float radius) {
-        nvgBeginPath(vg);
-        nvgFillPaint(vg, paint);
-        nvgRoundedRect(vg, bx, by, bw, bh, radius);
-        nvgFill(vg);
-    };
+    return nvgLinearGradient(vg, x, y, x + width, y + height, a(background), a(end));
+}
+
+void SkeletonCell::bar(NVGcontext* vg, NVGpaint paint, float x, float y, float w, float h, float radius) {
+    nvgBeginPath(vg);
+    nvgFillPaint(vg, paint);
+    nvgRoundedRect(vg, x, y, w, h, radius);
+    nvgFill(vg);
+}
+
+void SkeletonCell::draw(
+    NVGcontext* vg, float x, float y, float width, float height, brls::Style style, brls::FrameContext* ctx) {
+    NVGpaint paint = this->shimmerPaint(vg, x, y, width, height);
 
     // small cells (lists, chips): a single block
     if (height < 120) {
-        bar(x, y, width, height, 6);
+        bar(vg, paint, x, y, width, height, 6);
         return;
     }
 
     // structure of a media card: poster + title bar + subtitle
     // (same metrics as video_card.xml: label area = 55)
     float labels = 55;
-    bar(x, y, width, height - labels, 10);
+    bar(vg, paint, x, y, width, height - labels, 10);
     float top = y + height - labels + 12;
-    bar(x + width * 0.15f, top, width * 0.70f, 14, 7);
-    bar(x + width * 0.275f, top + 22, width * 0.45f, 10, 5);
+    bar(vg, paint, x + width * 0.15f, top, width * 0.70f, 14, 7);
+    bar(vg, paint, x + width * 0.275f, top + 22, width * 0.45f, 10, 5);
 }
 
 /// Skeleton DataSource

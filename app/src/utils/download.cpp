@@ -5,6 +5,7 @@
 #include "utils/offline_library.hpp"
 #include "utils/offline_catalog.hpp"
 #include "utils/image_cache.hpp"
+#include "utils/thread.hpp"
 #include "api/plex.hpp"
 #include "api/backend.hpp"
 #include <algorithm>
@@ -376,7 +377,7 @@ void DownloadManager::doDownload(DownloadItem& item) {
 
     brls::sync([this, itemId]() { this->statusEvent.fire(itemId, DownloadStatus::Downloading); });
 
-    brls::async([this, itemId, thumb, partKey, url, itemDir, cancel]() {
+    ThreadPool::instance().submit([this, itemId, thumb, partKey, url, itemDir, cancel](HTTP& s) {
         auto resetQueue = [this, itemId](const std::string& error) {
             brls::sync([this, itemId, error]() {
                 {

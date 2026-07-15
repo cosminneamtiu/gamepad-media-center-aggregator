@@ -1,10 +1,11 @@
 /*
     GMCA — Stremio addon engine implementation (see stremio/addons.hpp).
-    Loads the configured transportUrls' manifests once, then routes resource
-    queries across them.
+    Re-syncs the account's addon collection, then loads the configured
+    transportUrls' manifests once and routes resource queries across them.
 */
 
 #include "api/stremio/addons.hpp"
+#include "api/stremio/auth.hpp"
 #include "utils/config.hpp"
 #include <borealis/core/logger.hpp>
 #include <algorithm>
@@ -14,6 +15,24 @@ namespace stremio {
 void AddonEngine::ensureLoaded() {
     std::lock_guard<std::mutex> lock(mtx);
     if (loaded) return;
+
+    // Re-sync the account's addon collection before loading manifests. Stremio
+    // (re)configures an addon by REPLACING its transportUrl (e.g. Torrentio's
+    // debrid apikey lives in the URL path) and the official clients pull the
+    // collection at every startup — a list snapshotted at login goes stale and
+    // keeps serving raw-torrent streams instead of debrid links (GH #46). On
+    // failure (offline, expired key) keep the stored list; an empty collection
+    // is ignored too (a live account always has the default addons) rather
+    // than wiping a working list.
+    const std::string& authKey = AppConfig::instance().getToken();
+    if (!authKey.empty()) {
+        try {
+            std::vector<std::string> fresh = fetchAddonCollection(authKey);
+            if (!fresh.empty()) AppConfig::instance().setStremioAddons(fresh);
+        } catch (const std::exception& ex) {
+            brls::Logger::warning("stremio: addon collection sync failed: {}", ex.what());
+        }
+    }
 
     // AppConfig::instance().getStremioAddons() returns the configured list of
     // transportUrls (each ending in /manifest.json). Provided by the config layer.

@@ -30,6 +30,13 @@ struct Account {
 /// HTTP/parse failure or on an `{"error":{…}}` envelope (message preserved).
 Account login(const std::string& email, const std::string& password);
 
+/// POST /api/addonCollectionGet → transportUrls of the account's remote addons
+/// (local 127.0.0.1/localhost ones filtered out). Also used to re-sync the
+/// collection after login: Stremio (re)configures an addon by REPLACING its
+/// transportUrl (e.g. Torrentio's debrid apikey lives in the URL path), so a
+/// list snapshotted at login goes stale (GH #46). Throws std::runtime_error.
+std::vector<std::string> fetchAddonCollection(const std::string& authKey);
+
 // ---- account datastore: the user's "library" (= watchlist) + playback state ----
 // All synchronous (call from brls::async); throw std::runtime_error on failure.
 

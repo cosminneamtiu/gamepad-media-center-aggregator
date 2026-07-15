@@ -141,8 +141,11 @@ void MainActivity::addSidebarStatus() {
     if (!footer) return;
 
     // wifi + battery, half the status-bar size and dimmed, in a row at the very
-    // bottom of the pinned footer (appended after the gear). The widgets
-    // gracefully collapse to nothing on platforms without battery/wireless info.
+    // bottom of the pinned footer (appended after the gear). Each widget is added
+    // only when the platform can actually report that info: otherwise its ctor
+    // early-returns and leaves its members null, but draw() dereferences them
+    // anyway (null-deref crash — battery on a PC with no battery, see #37; wifi on
+    // desktop Linux where canShowWirelessLevel() is false).
     auto* status = new brls::Box();
     status->setAxis(brls::Axis::ROW);
     status->setJustifyContent(brls::JustifyContent::CENTER);
@@ -151,10 +154,13 @@ void MainActivity::addSidebarStatus() {
     status->setMarginBottom(2);
     status->setAlpha(0.6f);
 
-    auto* wifi = new brls::WirelessWidget(0.5f);
-    wifi->setMarginRight(2);
-    status->addView(wifi);
-    if (brls::Application::getPlatform()->canShowBatteryLevel()) {
+    auto* platform = brls::Application::getPlatform();
+    if (platform->canShowWirelessLevel()) {
+        auto* wifi = new brls::WirelessWidget(0.5f);
+        wifi->setMarginRight(2);
+        status->addView(wifi);
+    }
+    if (platform->canShowBatteryLevel()) {
         status->addView(new brls::BatteryWidget(0.5f));
     }
     footer->addView(status);

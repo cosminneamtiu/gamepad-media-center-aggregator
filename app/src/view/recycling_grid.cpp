@@ -641,6 +641,26 @@ float RecyclingGrid::getHeightByCellIndex(size_t index, size_t start) {
 
 void RecyclingGrid::forceRequestNextPage() { this->requestNextPage = false; }
 
+brls::View* RecyclingGrid::firstCellFocus() {
+    // contentBox children are in recycle (insertion) order, not index order, so
+    // the top-left cell is the one with the lowest index, not the first child.
+    // Read-only (no materialization): safe to call from focus-traversal probes.
+    brls::View* target = nullptr;
+    size_t best = 0;
+    for (auto* child : this->contentBox->getChildren()) {
+        void* ud = child->getParentUserData();
+        if (!ud) continue;  // scrolled header: not a cell
+        brls::View* focus = child->getDefaultFocus();
+        if (!focus) continue;  // skeleton / non-focusable cell
+        size_t index = *((size_t*)ud);
+        if (!target || index < best) {
+            target = focus;
+            best = index;
+        }
+    }
+    return target;
+}
+
 brls::View* RecyclingGrid::getNextCellFocus(brls::FocusDirection direction, brls::View* currentView) {
     void* parentUserData = currentView->getParentUserData();
 
@@ -669,24 +689,11 @@ brls::View* RecyclingGrid::getNextCellFocus(brls::FocusDirection direction, brls
     // crashed). Handle the header explicitly.
     if (!parentUserData) {
         if (direction == brls::FocusDirection::DOWN) {
-            // Enter the grid on its FIRST cell — the lowest index, not the first
-            // in child insertion order (recycling appends cells out of order).
-            // While only skeletons are attached, stay on the header rather than
-            // ejecting focus out of the grid.
-            View* target = nullptr;
-            size_t best = 0;
-            for (auto it : this->contentBox->getChildren()) {
-                void* ud = it->getParentUserData();
-                if (!ud) continue;  // the header itself
-                View* focus = it->getDefaultFocus();
-                if (!focus) continue;  // skeleton / non-focusable cell
-                size_t index = *((size_t*)ud);
-                if (!target || index < best) {
-                    target = focus;
-                    best = index;
-                }
-            }
-            return target ? target : currentView;  // currentView == header: stay put
+            // Enter the grid on its first cell (by index). While only skeletons
+            // are attached, stay on the header rather than ejecting focus out of
+            // the grid.
+            View* cell = firstCellFocus();
+            return cell ? cell : currentView;  // currentView == header: stay put
         }
         return leaveGrid(nullptr);
     }
@@ -837,15 +844,16 @@ brls::View* RecyclingGrid::getDefaultFocus() {
     if (!this->dataSource || this->dataSource->getItemCount() == 0) return nullptr;
     brls::View* cell = ScrollingFrame::getDefaultFocus();
     if (cell) return cell;
-    // giveFocus via a navigation route: target the first already attached
-    // cell (focusable — skeletons are not). NO materialization here:
-    // getDefaultFocus is probed by navigation traversals, mutating the
-    // content at that point wreaks havoc.
-    for (auto* child : this->contentBox->getChildren()) {
-        brls::View* focus = child->getDefaultFocus();
-        if (focus) return focus;
+    // giveFocus via a navigation route. NO materialization here: getDefaultFocus
+    // is probed by navigation traversals, mutating the content at that point
+    // wreaks havoc — only read already attached, focusable views.
+    // The scrolled header keeps priority when it carries focus (its widgets are
+    // the page's primary action, e.g. the artist Shuffle button); otherwise land
+    // on the first cell BY INDEX (not child insertion order — see firstCellFocus).
+    if (this->headerView) {
+        if (brls::View* header = this->headerView->getDefaultFocus()) return header;
     }
-    return nullptr;
+    return firstCellFocus();
 }
 
 brls::View* RecyclingGrid::create() { return new RecyclingGrid(); }

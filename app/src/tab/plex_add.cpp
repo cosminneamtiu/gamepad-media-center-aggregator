@@ -228,10 +228,10 @@ void PlexAdd::finishAll(const std::string& uuid, const std::string& name, const 
     const std::string& plexTvToken, const std::vector<plex::ServerResource>& servers) {
     // Activate the first owned server (a server you own is the natural landing
     // point), else the first available. Only THIS server is probed now:
-    // findBestConnection races its candidates in series (2 s each; plex.direct
-    // servers advertise 10+), so probing every server would take far too long.
-    // The other servers store their ranked candidate urls and resolve a
-    // reachable one lazily when the user switches to them (connectWithUser).
+    // findBestConnection races its candidates in parallel, but probing every
+    // server up front would still multiply the work needlessly. The other
+    // servers store their ranked candidate urls and resolve a reachable one
+    // lazily when the user switches to them (connectWithUser).
     size_t primaryIdx = 0;
     for (size_t i = 0; i < servers.size(); i++) {
         if (servers[i].owned) {

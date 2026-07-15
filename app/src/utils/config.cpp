@@ -596,25 +596,27 @@ bool AppConfig::checkLogin() {
     auto it = std::find_if(this->servers.begin(), this->servers.end(), is_server);
     if (it == this->servers.end() || it->urls.empty()) return false;
 
-    // Probes the remembered connections (the last reachable one is first).
-    // No dependency on plex.tv here: a reachable LAN server is enough.
-    // Stremio has no single reachable "server" (it is an aggregate of remote
-    // addons + an optional account); skip the probe and accept the stored entry.
-    for (auto& url : it->urls) {
-        if (it->type != "stremio" && !plex::probeConnection(url, it->access_token)) continue;
-        this->server_url = url;
-        this->server_token = it->access_token;
-        this->resetBackend();
-        this->applyTheme(backendTypeFromString(it->type));
-        if (url != it->urls.front()) {
-            AppServer front = *it;
-            front.urls = {url};
-            this->addServer(front);
-        }
-        return true;
+    // Reconnect to a remembered endpoint. No dependency on plex.tv here: a
+    // reachable stored URL is enough. The candidates are raced in parallel so an
+    // unreachable LAN address no longer blocks a reachable remote/relay one while
+    // roaming (GH #36). Stremio has no single reachable "server" (it aggregates
+    // remote addons + an optional account); skip the probe, accept the stored one.
+    std::string url = it->type == "stremio" ? (it->urls.empty() ? std::string() : it->urls.front())
+                                            : plex::raceConnections(it->urls, it->access_token);
+    if (url.empty()) {
+        brls::Logger::warning("AppConfig checkLogin: aucun endpoint joignable pour {}", it->name);
+        return false;
     }
-    brls::Logger::warning("AppConfig checkLogin: aucun endpoint joignable pour {}", it->name);
-    return false;
+    this->server_url = url;
+    this->server_token = it->access_token;
+    this->resetBackend();
+    this->applyTheme(backendTypeFromString(it->type));
+    if (url != it->urls.front()) {
+        AppServer front = *it;
+        front.urls = {url};
+        this->addServer(front);
+    }
+    return true;
 }
 
 std::string AppConfig::configDir() { return dataDir(AppVersion::getPackageName()); }

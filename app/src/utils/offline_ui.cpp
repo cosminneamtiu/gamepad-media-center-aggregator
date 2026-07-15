@@ -8,7 +8,7 @@ using namespace brls::literals;
 
 void offline_ui::tryReconnect() {
     brls::Application::notify("main/download/reconnecting"_i18n);
-    // checkLogin probes the remembered URLs (2 s each) — must run off the UI thread
+    // checkLogin probes the remembered URLs (raced in parallel) — must run off the UI thread
     brls::async([]() {
         bool ok = AppConfig::instance().checkLogin();
         brls::sync([ok]() {

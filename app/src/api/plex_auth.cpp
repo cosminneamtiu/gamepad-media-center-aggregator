@@ -5,8 +5,12 @@
 
 #include "api/plex/auth.hpp"
 #include "api/plex.hpp"
+#include "utils/thread.hpp"
 #include <cctype>
 #include <cstdio>
+#include <condition_variable>
+#include <memory>
+#include <mutex>
 
 namespace plex {
 
@@ -124,15 +128,68 @@ std::string switchHomeUser(const std::string& accountToken, const std::string& u
     });
 }
 
-bool probeConnection(const std::string& baseUrl, const std::string& accessToken, long timeoutMs) {
+bool probeConnection(const std::string& baseUrl, const std::string& accessToken, long timeoutMs, long connectMs) {
     // GET {base}/ WITH token: the root requires authentication, which
-    // immediately detects a revoked token
+    // immediately detects a revoked token. A short connect budget lets an
+    // unreachable LAN address fail fast; the larger total budget leaves room for
+    // a reachable but high-latency remote/relay handshake (GH #36).
     try {
-        HTTP::get(baseUrl + "/", headers(accessToken), HTTP::Timeout{timeoutMs});
+        HTTP::get(baseUrl + "/", headers(accessToken), HTTP::Timeout{timeoutMs, connectMs});
         return true;
     } catch (const std::exception& ex) {
         brls::Logger::debug("plex probe {} en échec : {}", baseUrl, ex.what());
         return false;
+    }
+}
+
+std::string raceConnections(const std::vector<std::string>& urls, const std::string& accessToken) {
+    if (urls.empty()) return "";
+    if (urls.size() == 1) return probeConnection(urls.front(), accessToken) ? urls.front() : "";
+
+    // Probe every candidate at once on the shared thread pool, then return the
+    // best-ranked one that answers. Priority is preserved without waiting on
+    // dead candidates: a candidate wins as soon as it succeeds AND every
+    // higher-ranked candidate has already failed. The state is heap-owned so the
+    // still-running probes stay valid after we return early (they only touch
+    // `state`, never this stack frame).
+    enum Status { Pending, Reachable, Unreachable };
+    struct RaceState {
+        std::mutex mutex;
+        std::condition_variable cond;
+        std::vector<Status> status;
+    };
+    auto state = std::make_shared<RaceState>();
+    state->status.assign(urls.size(), Pending);
+
+    for (size_t i = 0; i < urls.size(); i++) {
+        std::string url = urls[i];
+        ThreadPool::instance().submit([state, url, accessToken, i](HTTP&) {
+            // Guard against any stray throw so status[i] is always decided and
+            // the waiter below never blocks forever (probeConnection already
+            // swallows std::exception; this covers the pathological rest).
+            Status result = Unreachable;
+            try {
+                if (probeConnection(url, accessToken)) result = Reachable;
+            } catch (...) {
+            }
+            {
+                std::lock_guard<std::mutex> lock(state->mutex);
+                state->status[i] = result;
+            }
+            state->cond.notify_all();
+        });
+    }
+
+    std::unique_lock<std::mutex> lock(state->mutex);
+    for (;;) {
+        size_t i = 0;
+        for (; i < urls.size(); i++) {
+            if (state->status[i] == Pending) break;         // best candidate not yet decided: keep waiting
+            if (state->status[i] == Reachable) return urls[i];  // best decided candidate answers: winner
+            // Unreachable: a better candidate is ruled out, look at the next one
+        }
+        if (i == urls.size()) return "";  // every candidate decided, none reachable
+        state->cond.wait(lock);
     }
 }
 
@@ -195,15 +252,12 @@ std::vector<std::string> rankConnections(const ServerResource& server) {
 }
 
 std::string findBestConnection(const ServerResource& server, const std::string& preferredUri) {
-    // Remembered endpoint first, with a shorter timeout (first phase of the
-    // connection race)
-    if (!preferredUri.empty() && probeConnection(preferredUri, server.accessToken, 1500)) return preferredUri;
-
-    for (auto& url : rankConnections(server)) {
-        if (url == preferredUri) continue;  // already probed above
-        if (probeConnection(url, server.accessToken)) return url;
-    }
-    return "";
+    // Race the remembered endpoint (if any) ahead of the ranked candidates.
+    std::vector<std::string> urls;
+    if (!preferredUri.empty()) urls.push_back(preferredUri);
+    for (auto& url : rankConnections(server))
+        if (url != preferredUri) urls.push_back(url);
+    return raceConnections(urls, server.accessToken);
 }
 
 }  // namespace plex

@@ -36,19 +36,29 @@ std::vector<HomeUser> getHomeUsers(const std::string& accountToken);
 std::string switchHomeUser(const std::string& accountToken, const std::string& userUuid, const std::string& pin = "");
 
 /// Probes a base URL (GET {base}/ with token); returns true on 200.
-bool probeConnection(const std::string& baseUrl, const std::string& accessToken, long timeoutMs = 2000);
+/// `connectMs` bounds the connect+DNS phase so an unreachable host fails fast,
+/// while the larger `timeoutMs` lets a reachable but high-latency endpoint
+/// finish its TLS handshake + response (GH #36).
+bool probeConnection(const std::string& baseUrl, const std::string& accessToken, long timeoutMs = 5000,
+    long connectMs = 2000);
 
 /// Candidate base URLs of a server, ordered by priority (https+local ->
 /// https+remote -> https+relay -> http...) WITHOUT probing any of them.
 /// Used to persist a server's connection list ahead of a lazy probe at switch
-/// time; findBestConnection probes this list in order.
+/// time; raceConnections probes this list.
 std::vector<std::string> rankConnections(const ServerResource& server);
 
-/// Picks the best connection for a server: tries `preferredUri` then the
-/// candidates by priority https+local -> https+remote -> https+relay -> http...
-/// Returns the reachable base URL, or "".
-/// NOTE: sequential probing for now; racing all candidates in parallel is a
-/// planned phase 2 optimization.
+/// Probes `urls` (a priority-ordered candidate list) CONCURRENTLY and returns
+/// the highest-priority one that answers, or "". Racing matters off-network:
+/// probed serially, every unreachable LAN address (ranked first) had to hit its
+/// connect timeout before a reachable remote/relay endpoint was even tried, so a
+/// roaming connect stalled for many seconds or gave up (GH #36). Priority is
+/// still honoured — a lower-ranked candidate wins only once every better one has
+/// failed. Shared by every backend (Plex/Jellyfin/Emby) via the reconnect paths.
+std::string raceConnections(const std::vector<std::string>& urls, const std::string& accessToken);
+
+/// Picks the best connection for a server: races `preferredUri` (if any) ahead
+/// of the ranked candidates and returns the first reachable base URL, or "".
 std::string findBestConnection(const ServerResource& server, const std::string& preferredUri = "");
 
 }  // namespace plex

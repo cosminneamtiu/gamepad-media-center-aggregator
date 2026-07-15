@@ -205,6 +205,7 @@ public:
             connectWithUser(u);
             return true;
         });
+        this->addGestureRecognizer(new brls::TapGestureRecognizer(this));
         this->registerAction("hints/delete"_i18n, brls::BUTTON_X, [u, parent](brls::View*) {
             Dialog::cancelable("main/setting/server/delete"_i18n, [u, parent]() {
                 AppConfig::instance().removeUser(u.id);
@@ -310,6 +311,7 @@ public:
             view->present(new ServerTypeChoose());
             return true;
         });
+        this->addGestureRecognizer(new brls::TapGestureRecognizer(this));
     }
 
     void onFocusGained() override {

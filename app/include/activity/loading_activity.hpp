@@ -1,8 +1,8 @@
 /*
     Full-screen loading screen: spinner + "Connecting to server...".
-    Shown while probing the server URLs (plex::probeConnection, 2 s timeout
-    per URL, in series — plex.direct servers often advertise 10+ connections
-    including unreachable local IPs), both at startup (AppConfig::checkLogin)
+    Shown while probing the server URLs (plex::raceConnections — plex.direct
+    servers often advertise 10+ connections including unreachable local IPs, so
+    the candidates are raced in parallel), both at startup (AppConfig::checkLogin)
     and when selecting a profile (ServerList).
 */
 

@@ -180,7 +180,7 @@ void HTTP::set_option(const Range& r) {
 
 void HTTP::set_option(const Timeout& t) {
     curl_easy_setopt(this->easy, CURLOPT_TIMEOUT_MS, t.timeout);
-    curl_easy_setopt(this->easy, CURLOPT_CONNECTTIMEOUT_MS, t.timeout);
+    curl_easy_setopt(this->easy, CURLOPT_CONNECTTIMEOUT_MS, t.connect > 0 ? t.connect : t.timeout);
 }
 
 int HTTP::easy_progress_cb(void* clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {

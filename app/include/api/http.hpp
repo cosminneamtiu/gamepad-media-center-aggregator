@@ -32,7 +32,13 @@ public:
     };
 
     struct Timeout {
+        // Whole-request budget in ms (-1 = unlimited). `connect` is the
+        // connect+DNS budget: keeping it shorter than `timeout` lets an
+        // unreachable host fail fast while a reachable but high-latency endpoint
+        // still gets the full budget to complete its TLS handshake + response
+        // (GH #36 — roaming/WAN probes). `connect <= 0` keeps them identical.
         long timeout = TIMEOUT;
+        long connect = 0;
     };
 
     struct Cookie {

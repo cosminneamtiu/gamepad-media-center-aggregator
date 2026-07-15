@@ -179,11 +179,11 @@ int main(int argc, char* argv[]) {
     } else if (items.size() > 0) {
         RemoteView::play(items.front());
     } else {
-        // checkLogin() serially probes the remembered URLs of the active
-        // server (2 s timeout per URL, config.cpp:checkLogin): called here
-        // on the main thread it froze the very first frame for several
-        // seconds (changed network, server off...). Show the loading
-        // screen and probe in the background.
+        // checkLogin() probes the remembered URLs of the active server
+        // (config.cpp:checkLogin, now raced in parallel): called here on the
+        // main thread it froze the very first frame for several seconds
+        // (changed network, server off...). Show the loading screen and probe
+        // in the background.
         brls::Application::pushActivity(new LoadingActivity(), brls::TransitionAnimation::NONE);
         brls::Application::blockInputs();
         brls::async([]() {

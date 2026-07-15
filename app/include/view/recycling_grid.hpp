@@ -202,6 +202,11 @@ public:
     float itemExtraHeight = 0;
 
 private:
+    /// Lowest-index attached focusable cell (nullptr if none / only skeletons).
+    /// contentBox children are in recycle (insertion) order, not index order, so
+    /// "first child" is not the top-left cell once the grid has scrolled.
+    brls::View* firstCellFocus();
+
     bool layouted = false;
     float oldWidth = -1;
 

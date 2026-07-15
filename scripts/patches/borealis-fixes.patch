@@ -1570,7 +1570,7 @@ index 61978bd5..6104ec8e 100644
  {
      if (!contentView->getDefaultFocus())
 diff --git a/library/lib/views/widgets/battery.cpp b/library/lib/views/widgets/battery.cpp
-index 93981577..471bf205 100644
+index 93981577..5194fc34 100644
 --- a/library/lib/views/widgets/battery.cpp
 +++ b/library/lib/views/widgets/battery.cpp
 @@ -23,22 +23,23 @@
@@ -1602,7 +1602,19 @@ index 93981577..471bf205 100644
      level->detach();
  
      applyBackTheme(platform->getThemeVariant());
-@@ -104,7 +105,7 @@ void BatteryWidget::draw(NVGcontext* vg, float x, float y, float width, float he
+@@ -98,13 +99,19 @@ void BatteryWidget::applyLevelTheme(ThemeVariant theme)
+ 
+ void BatteryWidget::draw(NVGcontext* vg, float x, float y, float width, float height, Style style, FrameContext* ctx)
+ {
++    // The ctor early-returns (leaving level/back null) when the platform cannot
++    // report a battery level, yet draw() still runs while the widget is in the
++    // tree. Bail out before dereferencing those null members.
++    if (!platform->canShowBatteryLevel())
++        return;
++
+     this->updateState();
+     if (isBatteryCharging)
+         level->setColor(RGB(140, 251, 79));
      else
          applyLevelTheme(platform->getThemeVariant());
  
@@ -1612,7 +1624,7 @@ index 93981577..471bf205 100644
  }
  
 diff --git a/library/lib/views/widgets/wireless.cpp b/library/lib/views/widgets/wireless.cpp
-index 8e0fb6db..3a954c18 100644
+index 8e0fb6db..c39b5b73 100644
 --- a/library/lib/views/widgets/wireless.cpp
 +++ b/library/lib/views/widgets/wireless.cpp
 @@ -28,36 +28,37 @@ extern "C"
@@ -1660,3 +1672,16 @@ index 8e0fb6db..3a954c18 100644
      ethernet->setScalingType(ImageScalingType::FIT);
      ethernet->detach();
  
+@@ -141,6 +142,12 @@ void WirelessWidget::updateState()
+ 
+ void WirelessWidget::draw(NVGcontext* vg, float x, float y, float width, float height, Style style, FrameContext* ctx)
+ {
++    // The ctor early-returns (leaving the image members null) when the platform
++    // cannot report a wireless level, yet draw() still runs while the widget is
++    // in the tree. Bail out before dereferencing those null members.
++    if (!platform->canShowWirelessLevel())
++        return;
++
+     updateState();
+ 
+     if (hasEthernetConnection)

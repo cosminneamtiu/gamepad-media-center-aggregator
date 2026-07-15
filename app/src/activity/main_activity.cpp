@@ -154,8 +154,9 @@ void MainActivity::addSidebarStatus() {
     auto* wifi = new brls::WirelessWidget(0.5f);
     wifi->setMarginRight(2);
     status->addView(wifi);
-    status->addView(new brls::BatteryWidget(0.5f));
-
+    if (brls::Application::getPlatform()->canShowBatteryLevel()) {
+        status->addView(new brls::BatteryWidget(0.5f));
+    }
     footer->addView(status);
 }
 

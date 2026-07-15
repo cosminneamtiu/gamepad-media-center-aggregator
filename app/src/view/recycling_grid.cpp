@@ -644,6 +644,53 @@ void RecyclingGrid::forceRequestNextPage() { this->requestNextPage = false; }
 brls::View* RecyclingGrid::getNextCellFocus(brls::FocusDirection direction, brls::View* currentView) {
     void* parentUserData = currentView->getParentUserData();
 
+    // Hand focus off to the grid's parent (sidebar / tab bar). A cell on the top
+    // row leaving upward first tries a focusable scrolled header (setHeaderView),
+    // so a header widget reachable by DOWN is reachable back by UP (issue #44).
+    // Gate on the real row-0 index, not "the row search found nothing" — that is
+    // also true when the rows above are momentarily unmounted (recycling / tab
+    // return race), and there we must fall through instead of teleporting to the
+    // header. Never fires when leaving the header itself (parentUserData null).
+    auto leaveGrid = [&](View* candidate) -> View* {
+        if (!candidate && parentUserData && direction == brls::FocusDirection::UP && this->headerView &&
+            *((size_t*)parentUserData) < (size_t)spanCount) {
+            if (View* header = this->headerView->getDefaultFocus()) return header;
+        }
+        View* next = getParentNavigationDecision(this, candidate, direction);
+        if (!next && hasParent()) next = getParent()->getNextFocus(direction, this);
+        return next;
+    };
+
+    // The scrolled header (setHeaderView) is a child of the contentBox with NO
+    // index userdata. The per-cell loops below already skip it, but every path
+    // here that reads parentUserData as a cell index would dereference nullptr on
+    // it (issue #44: the artist page keeps its Shuffle/Play button inside such a
+    // header, so any D-pad move from that button ran *(size_t*)nullptr and
+    // crashed). Handle the header explicitly.
+    if (!parentUserData) {
+        if (direction == brls::FocusDirection::DOWN) {
+            // Enter the grid on its FIRST cell — the lowest index, not the first
+            // in child insertion order (recycling appends cells out of order).
+            // While only skeletons are attached, stay on the header rather than
+            // ejecting focus out of the grid.
+            View* target = nullptr;
+            size_t best = 0;
+            for (auto it : this->contentBox->getChildren()) {
+                void* ud = it->getParentUserData();
+                if (!ud) continue;  // the header itself
+                View* focus = it->getDefaultFocus();
+                if (!focus) continue;  // skeleton / non-focusable cell
+                size_t index = *((size_t*)ud);
+                if (!target || index < best) {
+                    target = focus;
+                    best = index;
+                }
+            }
+            return target ? target : currentView;  // currentView == header: stay put
+        }
+        return leaveGrid(nullptr);
+    }
+
     // Allow up and down when axis is ROW
     if ((this->contentBox->getAxis() == brls::Axis::ROW && direction != brls::FocusDirection::LEFT &&
             direction != brls::FocusDirection::RIGHT)) {
@@ -679,9 +726,7 @@ brls::View* RecyclingGrid::getNextCellFocus(brls::FocusDirection direction, brls
         int position = *((size_t*)parentUserData) % spanCount;
         if ((direction == brls::FocusDirection::LEFT && position == 0) ||
             (direction == brls::FocusDirection::RIGHT && position == (spanCount - 1))) {
-            View* next = getParentNavigationDecision(this, nullptr, direction);
-            if (!next && hasParent()) next = getParent()->getNextFocus(direction, this);
-            return next;
+            return leaveGrid(nullptr);
         }
     }
 
@@ -690,9 +735,7 @@ brls::View* RecyclingGrid::getNextCellFocus(brls::FocusDirection direction, brls
             direction != brls::FocusDirection::RIGHT) ||
         (this->contentBox->getAxis() == brls::Axis::COLUMN && direction != brls::FocusDirection::UP &&
             direction != brls::FocusDirection::DOWN)) {
-        View* next = getParentNavigationDecision(this, nullptr, direction);
-        if (!next && hasParent()) next = getParent()->getNextFocus(direction, this);
-        return next;
+        return leaveGrid(nullptr);
     }
 
     // Traverse the children
@@ -717,9 +760,7 @@ brls::View* RecyclingGrid::getNextCellFocus(brls::FocusDirection direction, brls
         currentFocusIndex += offset;
     }
 
-    currentFocus = getParentNavigationDecision(this, currentFocus, direction);
-    if (!currentFocus && hasParent()) currentFocus = getParent()->getNextFocus(direction, this);
-    return currentFocus;
+    return leaveGrid(currentFocus);
 }
 
 void RecyclingGrid::onLayout() {

@@ -242,6 +242,11 @@
       "low_quality": "Düşük kalite video çözümü (daha az işlemci kullanır)",
       "in_memory_cache": "Bellek içi önbellek",
       "subs_fallback": "Alt yazıları otomatik yükle",
+      "subtitle_lang": {
+        "header": "Altyazı dili",
+        "auto": "Otomatik (uygulama dili)",
+        "off": "Kapalı"
+      },
       "vo": "Video çıktısı",
       "hwdec": "Donanımsal kod çözme",
       "force_directplay": "Doğrudan oynatmaya zorla",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "Kullanılabilir altyazı yok. Buradan altyazı almak için Stremio hesabınıza bir altyazı eklentisi (ör. OpenSubtitles) yükleyin."
+    },
     "movies": "Filmler",
     "series": "Diziler",
     "popular": "Popüler",

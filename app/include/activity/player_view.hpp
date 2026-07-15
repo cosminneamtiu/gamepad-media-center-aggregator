@@ -54,6 +54,14 @@ private:
     /// true when a fallback was started (so the error dialog is suppressed).
     bool tryDirectPlayFallback();
     bool playIndex(int index);
+    /// Resolves external subtitle sidecars for the current item through the
+    /// backend (Stremio addons), lazily and only when the played item changes.
+    /// Plex/Jellyfin embed theirs in the Media streams, so this is a no-op there.
+    void resolveExternalSubtitles();
+    /// sub-adds the resolved external subtitles into mpv, selecting the track
+    /// matching the preferred-language setting (PLAYER_SUBTITLE_LANG). Called on
+    /// every (re)load — mpv drops sub-add'ed tracks on each loadfile.
+    void addExternalSubtitles();
     /// POST /:/timeline report (time/duration in ms)
     void reportTimeline(const std::string& state, int64_t timeMs);
     void reportStop();
@@ -81,6 +89,15 @@ private:
     /// per (re)load; reset by playMedia on every deliberate (re)start
     bool directPlayFallback = false;
     std::vector<plex::Item> episodes;
+
+    /// External subtitle sidecars (Stremio addons) for the current item, resolved
+    /// lazily at play time and sub-add'ed on each (re)load. `externalSubsItem` is
+    /// the ratingKey they belong to, so quality/track switches (same item) don't
+    /// re-fetch while an episode switch does. `mpvLoaded` guards the async->sub-add
+    /// timing (add on load OR when the fetch lands, whichever is last).
+    std::vector<plex::Stream> externalSubs;
+    std::string externalSubsItem;
+    bool mpvLoaded = false;
 
     MPVEvent::Subscription eventSubscribeID;
     brls::VoidEvent::Subscription exitSubscribeID;

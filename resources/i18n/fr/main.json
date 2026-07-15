@@ -254,6 +254,11 @@
       "low_quality": "Décodage en basse qualité (réduit la qualité de l'image pour une moindre consommation d'énergie)",
       "in_memory_cache": "Cache en mémoire",
       "subs_fallback": "Chargement automatique des sous-titres",
+      "subtitle_lang": {
+        "header": "Langue des sous-titres",
+        "auto": "Automatique (langue de l'application)",
+        "off": "Désactivée"
+      },
       "vo": "Sortie vidéo",
       "hwdec": "Décodage matériel",
       "force_directplay": "Forcer la lecture directe",
@@ -433,6 +438,9 @@
     "error": "Impossible de charger"
   },
   "stremio": {
+    "subtitle": {
+      "none": "Aucun sous-titre disponible. Installez un addon de sous-titres (ex. OpenSubtitles) dans votre compte Stremio pour en obtenir ici."
+    },
     "movies": "Films",
     "series": "Séries",
     "popular": "Populaires",

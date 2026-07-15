@@ -242,6 +242,11 @@
       "low_quality": "Decodificación de baja calidad (menor uso de CPU)",
       "in_memory_cache": "Caché en memoria",
       "subs_fallback": "Cargar subtítulos automáticamente",
+      "subtitle_lang": {
+        "header": "Idioma de los subtítulos",
+        "auto": "Automático (idioma de la app)",
+        "off": "Desactivado"
+      },
       "vo": "Salida de vídeo",
       "hwdec": "Decodificación por hardware",
       "force_directplay": "Forzar reproducción directa",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "No hay subtítulos disponibles. Instala un addon de subtítulos (p. ej. OpenSubtitles) en tu cuenta de Stremio para obtenerlos aquí."
+    },
     "movies": "Películas",
     "series": "Series",
     "popular": "Populares",

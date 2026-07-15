@@ -26,6 +26,7 @@
 #include "view/selector_cell.hpp"
 #include "view/library_manager.hpp"
 #include "api/plex.hpp"
+#include "api/media/langs.hpp"
 #include "utils/dialog.hpp"
 #ifdef __SWITCH__
 #include "utils/overclock.hpp"
@@ -151,6 +152,27 @@ void SettingTab::onCreate() {
         MPVCore::instance().restart();
         conf.setItem(AppConfig::PLAYER_SUBS_FALLBACK, value);
     });
+
+    // Preferred external-subtitle language (Stremio addon sidecars). "auto"
+    // follows the app language, "off" disables auto-selection; otherwise a
+    // 2-letter code. Values/labels are built from the shared language catalog so
+    // they stay in sync with what the backend can resolve.
+    std::vector<std::string> subLangValues = {"auto", "off"};
+    std::vector<std::string> subLangLabels = {
+        "main/setting/playback/subtitle_lang/auto"_i18n,
+        "main/setting/playback/subtitle_lang/off"_i18n,
+    };
+    for (auto& l : media::subtitleLangCatalog()) {
+        subLangValues.push_back(l.code);
+        subLangLabels.push_back(l.display);
+    }
+    std::string subLangCur = conf.getItem(AppConfig::PLAYER_SUBTITLE_LANG, std::string("auto"));
+    auto subLangIt = std::find(subLangValues.begin(), subLangValues.end(), subLangCur);
+    int subLangIndex = subLangIt != subLangValues.end() ? (int)(subLangIt - subLangValues.begin()) : 0;
+    selectorSubLang->init("main/setting/playback/subtitle_lang/header"_i18n, subLangLabels, subLangIndex,
+        [subLangValues](int selected) {
+            AppConfig::instance().setItem(AppConfig::PLAYER_SUBTITLE_LANG, subLangValues[selected]);
+        });
 
     btnDirectPlay->init("main/setting/playback/force_directplay"_i18n, MPVCore::FORCE_DIRECTPLAY, [&conf](bool value) {
         if (MPVCore::FORCE_DIRECTPLAY == value) return;

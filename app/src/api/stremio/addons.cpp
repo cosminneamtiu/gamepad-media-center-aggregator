@@ -72,6 +72,14 @@ std::vector<Addon> AddonEngine::addonsFor(
     return out;
 }
 
+bool AddonEngine::hasResource(const std::string& resource) const {
+    std::lock_guard<std::mutex> lock(mtx);
+    if (!loaded) return true;  // unknown yet -> assume yes; never hint prematurely
+    for (const auto& a : addons)
+        if (a.manifest.resources.count(resource)) return true;
+    return false;
+}
+
 std::vector<std::pair<Addon, Catalog>> AddonEngine::allCatalogs() {
     std::lock_guard<std::mutex> lock(mtx);
     std::vector<std::pair<Addon, Catalog>> out;

@@ -242,6 +242,11 @@
       "low_quality": "低品質デコード (CPU 使用率が低い)",
       "in_memory_cache": "インメモリーキャッシュ",
       "subs_fallback": "字幕の自動読み込み",
+      "subtitle_lang": {
+        "header": "字幕の言語",
+        "auto": "自動（アプリの言語）",
+        "off": "オフ"
+      },
       "vo": "ビデオ出力",
       "hwdec": "ハードウェアデコード",
       "force_directplay": "ダイレクト再生を強制",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "利用できる字幕がありません。Stremio アカウントに字幕アドオン（例: OpenSubtitles）をインストールすると、ここで字幕を取得できます。"
+    },
     "movies": "映画",
     "series": "シリーズ",
     "popular": "人気",

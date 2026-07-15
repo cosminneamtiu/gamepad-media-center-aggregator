@@ -1,12 +1,14 @@
 /*
-    GMCA — Stremio implementation of media::Backend (étape 1: NAVIGATION).
-    Translates the Stremio addon protocol (manifests, catalogs, meta, episodes)
-    into the neutral media:: model. Stateless, unauthenticated, multi-addon: an
-    AddonEngine aggregates the configured addons and routes each request.
+    GMCA — Stremio implementation of media::Backend.
+    Translates the Stremio addon protocol (manifests, catalogs, meta, episodes,
+    streams, subtitles) into the neutral media:: model. Stateless, multi-addon: an
+    AddonEngine aggregates the configured addons and routes each request. The
+    addons are unauthenticated; the account token only drives the library sync.
 
-    SCOPE: navigation only — catalogs as Sections/Hubs, item detail, seasons,
-    episodes, search. Playback (resolvePlayback) is a stub for étape 2; account
-    actions (watchlist, profiles, progress) are no-ops for now. See MULTI_BACKEND.md.
+    SCOPE: navigation (catalogs as Sections/Hubs, item detail, seasons, episodes,
+    search), playback (resolvePlayback + external subtitles via getSubtitles), and
+    account actions (watchlist, watched flag, progress) when connected. See
+    MULTI_BACKEND.md.
 
     Identity: Item::ratingKey is the OPAQUE "{stremioType}:{stremioId}" codec
     (stremio/types.hpp). Stremio images are ABSOLUTE URLs, passed through verbatim.
@@ -73,6 +75,9 @@ public:
     media::PlaybackSource resolvePlayback(
         const media::Item& item, const media::Media& version, const media::PlaybackOptions& opts) override;
     std::string subtitleSidecarUrl(const std::string& streamKey) const override;
+    void getSubtitles(
+        const media::Item& item, media::Then<std::vector<media::Stream>> then, media::OnError error) override;
+    std::string subtitleMenuHint() const override;
     void reportProgress(const std::string& id, media::PlayState state, int64_t posMs, int64_t durMs,
         const std::string& sessionId) override;
 

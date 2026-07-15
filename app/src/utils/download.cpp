@@ -360,7 +360,8 @@ void DownloadManager::processQueue() {
     }
 }
 
-// Must be called with mutex held. Copies what it needs, then releases via async.
+// Must be called with mutex held. Copies what it needs, then hands the transfer
+// off to a ThreadPool worker.
 void DownloadManager::doDownload(DownloadItem& item) {
     item.status = DownloadStatus::Downloading;
 
@@ -377,7 +378,11 @@ void DownloadManager::doDownload(DownloadItem& item) {
 
     brls::sync([this, itemId]() { this->statusEvent.fire(itemId, DownloadStatus::Downloading); });
 
-    ThreadPool::instance().submit([this, itemId, thumb, partKey, url, itemDir, cancel](HTTP& s) {
+    // Runs on a ThreadPool worker. We deliberately ignore the pool's shared
+    // per-worker HTTP session and open a fresh one below: this transfer installs
+    // a progress callback + cancel token that would otherwise linger on the
+    // shared session and leak into the next image/version task on that worker.
+    ThreadPool::instance().submit([this, itemId, thumb, partKey, url, itemDir, cancel](HTTP&) {
         auto resetQueue = [this, itemId](const std::string& error) {
             brls::sync([this, itemId, error]() {
                 {

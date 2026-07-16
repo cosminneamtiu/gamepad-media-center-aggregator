@@ -42,22 +42,26 @@ uint32_t get32(const uint8_t* p) {
 }
 }  // namespace
 
-PeerConnection::PeerConnection(const PeerAddr& addr, PeerHost* host, Encryption enc)
-    : addr_(addr), host_(host), enc_(enc) {}
+PeerConnection::PeerConnection(
+    const PeerAddr& addr, PeerHost* host, std::unique_ptr<PeerTransport> transport, Encryption enc)
+    : addr_(addr), host_(host), transport_(std::move(transport)), enc_(enc) {}
 
 bool PeerConnection::startConnect() {
-    if (!sock_.open()) return false;
+    if (!transport_) return false;
     buildHandshake();  // fills btHandshake_ (the MSE "IA" / the plaintext handshake)
     if (enc_ == Encryption::Plaintext) {
         queue(btHandshake_);  // legacy clear-text handshake, flushed once connected
     } else {
         // MSE/PE: queue step 1 (DH pubkey + pad) RAW; the BitTorrent handshake is
-        // carried encrypted as the IA of step 3 once we have the peer's key.
+        // carried encrypted as the IA of step 3 once we have the peer's key. Runs
+        // over µTP exactly as over TCP — the transport is a plain byte stream.
         mse_ = std::make_unique<MseHandshake>(host_->hostInfoHash(), btHandshake_, enc_ == Encryption::Forced);
         outbuf_ += mse_->firstFlight();
     }
-    if (!sock_.startConnect(addr_.host, addr_.port)) {
-        sock_.close();
+    // The handshake bytes are already queued in outbuf_ and are flushed once the
+    // transport reports connected (writable) — TCP connect, or the µTP SYN-ACK.
+    if (!transport_->startConnect(addr_)) {
+        transport_->close();
         return false;
     }
     state_ = State::Connecting;
@@ -67,7 +71,7 @@ bool PeerConnection::startConnect() {
 }
 
 void PeerConnection::close() {
-    sock_.close();
+    if (transport_) transport_->close();
     state_ = State::Closed;
 }
 
@@ -92,7 +96,7 @@ void PeerConnection::queue(const std::string& bytes) {
 void PeerConnection::flush() {
     if (state_ == State::Connecting || state_ == State::Closed) return;
     while (outSent_ < outbuf_.size()) {
-        int n = sock_.send(outbuf_.data() + outSent_, outbuf_.size() - outSent_);
+        int n = transport_->send(outbuf_.data() + outSent_, outbuf_.size() - outSent_);
         if (n > 0) {
             outSent_ += (size_t)n;
             lastSendMs_ = nowMs();
@@ -125,7 +129,7 @@ void PeerConnection::buildHandshake() {
 
 void PeerConnection::onWritable() {
     if (state_ == State::Connecting) {
-        int r = sock_.checkConnected();
+        int r = transport_->checkConnected();
         if (r == 1) {
             // MSE peers enter the crypto handshake (step 1 already queued); plaintext
             // peers go straight to waiting for the BitTorrent handshake reply.
@@ -144,7 +148,7 @@ void PeerConnection::onReadable() {
     char buf[65536];
     std::string raw;
     for (;;) {
-        int n = sock_.recv(buf, sizeof(buf));
+        int n = transport_->recv(buf, sizeof(buf));
         if (n > 0) {
             raw.append(buf, (size_t)n);
             if (raw.size() > (size_t)kMaxMessageLen * 4) {  // runaway guard

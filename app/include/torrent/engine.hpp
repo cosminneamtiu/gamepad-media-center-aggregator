@@ -35,9 +35,23 @@
 #include "torrent/piece_picker.hpp"
 #include "torrent/storage.hpp"
 #include "torrent/tracker.hpp"
+#include "torrent/transport.hpp"
 #include "torrent/types.hpp"
+#include "torrent/utp.hpp"
 
 namespace torrent {
+
+/// Which carrier a peer attempt uses (see transport.hpp / utp.hpp).
+enum class TransportKind { Tcp, Utp };
+
+/// A queued outgoing connection attempt: an endpoint + carrier + encryption. Fresh
+/// tracker/PEX peers start as {addr, TCP, cfg.encryption}; the fallback ladder
+/// (connectPending) re-queues the survivors of a failed attempt on the next rung.
+struct PeerAttempt {
+    PeerAddr addr;
+    TransportKind transport = TransportKind::Tcp;
+    Encryption enc = Encryption::Prefer;
+};
 
 class TorrentEngine : public PeerHost {
 public:
@@ -84,6 +98,13 @@ private:
     void announcerLoop();
     void webSeedLoop();
 
+    void initUtp();  // bring up the µTP manager (no-op when enableUtp is off)
+    std::unique_ptr<PeerTransport> makeTransport(const PeerAddr&, TransportKind);
+    std::string attemptKey(const PeerAddr&, TransportKind, Encryption) const;
+    /// Queue the next fallback rung for a peer that died before its BitTorrent
+    /// handshake (MSE->plaintext on the same carrier, then TCP->µTP), if untried.
+    void queueFallback(const PeerAddr&, TransportKind wasKind, Encryption wasEnc);
+
     void enqueuePeers(const std::vector<PeerAddr>&);
     void connectPending();
     void scheduleMetadataRequests();
@@ -119,16 +140,23 @@ private:
     std::string fileName_;
     mutable std::mutex pickerMutex_;
 
+    // µTP (BEP-29) manager: one libutp context + one shared UDP socket multiplexing
+    // every µTP peer. Null when µTP is disabled/unavailable (engine stays TCP-only).
+    // Declared before peers_ so it outlives them (peers hold µTP transports that
+    // utp_close into this context); teardown order is also enforced in close().
+    std::unique_ptr<UtpManager> utpMgr_;
+
     // peers
     std::vector<std::unique_ptr<PeerConnection>> peers_;
     std::mutex peersMutex_;
     std::vector<PeerAddr> pendingPeers_;
     std::unordered_set<std::string> knownPeers_;
-    // MSE plaintext fallback (Prefer policy): a peer that failed the MSE handshake
-    // before its BitTorrent handshake gets one clear-text reconnect. Engine-thread
-    // only (touched from connectPending), so no lock needed.
-    std::vector<PeerAddr> plaintextRetry_;
-    std::unordered_set<std::string> plaintextTried_;
+    // Fallback ladder (engine-thread only, no lock): a peer that dies before its
+    // BitTorrent handshake is re-queued on the next rung — MSE->plaintext on the
+    // same carrier (the pre-µTP behaviour), then TCP->µTP. attemptTried_ dedupes
+    // combos ("host:port|t|e") so each rung is dialed at most once per endpoint.
+    std::vector<PeerAttempt> retryQueue_;
+    std::unordered_set<std::string> attemptTried_;
     // BEP-11 outgoing PEX cadence.
     int64_t lastPexMs_ = 0;
     int pexRounds_ = 0;

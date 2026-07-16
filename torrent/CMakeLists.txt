@@ -26,6 +26,7 @@ endif ()
 set(TORRENT_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(TORRENT_INCLUDE ${TORRENT_ROOT}/app/include)
 set(TORRENT_SRC ${TORRENT_ROOT}/app/src/torrent)
+set(TORRENT_VENDOR ${TORRENT_ROOT}/app/vendor)
 
 set(TORRENT_ENGINE_SOURCES
     ${TORRENT_SRC}/bencode.cpp
@@ -35,6 +36,8 @@ set(TORRENT_ENGINE_SOURCES
     ${TORRENT_SRC}/log.cpp
     ${TORRENT_SRC}/util.cpp
     ${TORRENT_SRC}/socket.cpp
+    ${TORRENT_SRC}/transport.cpp
+    ${TORRENT_SRC}/utp.cpp
     ${TORRENT_SRC}/metadata.cpp
     ${TORRENT_SRC}/http_client.cpp
     ${TORRENT_SRC}/storage.cpp
@@ -44,6 +47,40 @@ set(TORRENT_ENGINE_SOURCES
     ${TORRENT_SRC}/http_server.cpp
     ${TORRENT_SRC}/engine.cpp
 )
+
+# --- libutp (µTP / BEP-29 transport), vendored under app/vendor/libutp ---------
+# Reference C++ implementation of µTP (LEDBAT over UDP), MIT-licensed, no Boost,
+# no TLS — pure transport. Built as its OWN static lib so its third-party warnings
+# and build flags (matching upstream's Makefile: -DPOSIX, -fno-exceptions,
+# -fno-rtti) stay isolated from the engine. It only ever talks to our UDP shim via
+# the callbacks wired in app/src/torrent/utp.cpp. The vendored source is unmodified
+# (see app/vendor/libutp/VENDOR.txt for the upstream commit).
+set(LIBUTP_DIR ${TORRENT_VENDOR}/libutp)
+set(LIBUTP_SOURCES
+    ${LIBUTP_DIR}/utp_internal.cpp
+    ${LIBUTP_DIR}/utp_utils.cpp
+    ${LIBUTP_DIR}/utp_hash.cpp
+    ${LIBUTP_DIR}/utp_callbacks.cpp
+    ${LIBUTP_DIR}/utp_api.cpp
+    ${LIBUTP_DIR}/utp_packedsockaddr.cpp
+)
+add_library(utp STATIC ${LIBUTP_SOURCES})
+target_include_directories(utp PUBLIC ${LIBUTP_DIR})
+target_compile_features(utp PRIVATE cxx_std_11)
+if (NOT WIN32)
+    # POSIX selects the BSD-sockets path in utp_types.h (SOCKADDR_STORAGE etc.).
+    # Every GMCA target is POSIX/BSD-sockets (desktop, libnx bsd, openorbis, and
+    # vitasdk's newlib BSD layer) — Windows would need a winsock branch (unused).
+    target_compile_definitions(utp PRIVATE POSIX)
+endif ()
+# libutp uses neither exceptions nor RTTI (matches upstream); -w silences the
+# vendored code's warnings without touching the engine's own warning policy.
+target_compile_options(utp PRIVATE -fno-exceptions -fno-rtti -w)
+if (PLATFORM_PSV)
+    # vitasdk newlib lacks the POSIX IN6_IS_ADDR_V4MAPPED macro libutp expects;
+    # force-include a tiny compat shim so the vendored source builds unmodified.
+    target_compile_options(utp PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/libutp_vita_compat.h)
+endif ()
 
 # HTTP (trackers/web seeds) uses libcurl.
 find_package(Threads REQUIRED)
@@ -83,6 +120,9 @@ add_library(torrent_engine STATIC ${TORRENT_ENGINE_SOURCES})
 target_include_directories(torrent_engine PUBLIC ${TORRENT_INCLUDE})
 target_compile_features(torrent_engine PUBLIC cxx_std_17)
 target_link_libraries(torrent_engine PUBLIC Threads::Threads)
+# µTP transport: app/src/torrent/utp.cpp includes libutp's utp.h and links libutp.
+# PRIVATE — libutp is an implementation detail hidden behind PeerTransport.
+target_link_libraries(torrent_engine PRIVATE utp)
 # Switch/Vita curl comes from pkg-config (CURL_* vars); PS4 (openorbis) and desktop
 # come from find_package(CURL), which exports the CURL::libcurl imported target.
 if (PLATFORM_SWITCH OR PLATFORM_PSV)

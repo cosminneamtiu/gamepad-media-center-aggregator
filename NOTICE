@@ -12,6 +12,13 @@ miniz (library/miniz/)
   Public domain / MIT, by Rich Geldreich et al.
   https://github.com/richgel999/miniz — see library/miniz/LICENSE.
 
+libutp (app/vendor/libutp/)
+  MIT License, Copyright (c) 2010-2013 BitTorrent, Inc.
+  https://github.com/bittorrent/libutp — see app/vendor/libutp/LICENSE.
+  The reference µTP (uTorrent Transport Protocol, BEP-29) implementation, vendored
+  unmodified (upstream commit in app/vendor/libutp/VENDOR.txt) to provide the µTP
+  peer transport. Built as a separate static target by torrent/CMakeLists.txt.
+
 PS Vita in-app self-update (app/src/utils/vita_install.cpp, issue #14)
   The technique used to install a homebrew VPK from within the app — forging a
   self-signed fake-package "head.bin" and promoting the extracted directory with

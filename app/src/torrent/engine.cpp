@@ -47,6 +47,7 @@ std::string TorrentEngine::open(const std::string& magnetOrInfoHash, int fileIdx
     }
     meta0ReqMs_ = 0;
     running_ = true;
+    initUtp();  // stand up the µTP carrier before the loop that dials peers
     engineThread_ = std::thread([this] { engineLoop(); });
     announcerThread_ = std::thread([this] { announcerLoop(); });
 
@@ -75,6 +76,7 @@ std::string TorrentEngine::openTorrentFile(const std::string& rawTorrent, int fi
         for (auto& w : meta_.webSeeds) webSeeds_.push_back(w);
     }
     running_ = true;
+    initUtp();  // stand up the µTP carrier before the loop that dials peers
     // Metadata is already known -> stand up the data stage before the loop runs.
     startDataStage(wantFileIdx_);
     engineThread_ = std::thread([this] { engineLoop(); });
@@ -165,19 +167,67 @@ void TorrentEngine::enqueuePeers(const std::vector<PeerAddr>& peers) {
     }
 }
 
+void TorrentEngine::initUtp() {
+    if (!cfg_.enableUtp) return;
+    utpMgr_ = std::make_unique<UtpManager>();
+    if (!utpMgr_->start()) {
+        utpMgr_.reset();  // UDP/libutp unavailable -> engine stays TCP-only
+    }
+}
+
+std::unique_ptr<PeerTransport> TorrentEngine::makeTransport(const PeerAddr& addr, TransportKind kind) {
+    if (kind == TransportKind::Utp) {
+        if (!utpMgr_ || !utpMgr_->active()) return nullptr;
+        return utpMgr_->createTransport(addr);
+    }
+    return std::make_unique<TcpTransport>();
+}
+
+std::string TorrentEngine::attemptKey(const PeerAddr& addr, TransportKind kind, Encryption enc) const {
+    char t = kind == TransportKind::Utp ? 'u' : 't';
+    char e = enc == Encryption::Forced ? 'f' : enc == Encryption::Prefer ? 'r' : 'p';
+    return addr.str() + "|" + t + "|" + e;
+}
+
+void TorrentEngine::queueFallback(const PeerAddr& addr, TransportKind wasKind, Encryption wasEnc) {
+    auto utpUsable = [&] { return cfg_.enableUtp && utpMgr_ && utpMgr_->active(); };
+    auto tryEnqueue = [&](TransportKind kind, Encryption enc) {
+        if (kind == TransportKind::Tcp && !cfg_.enableTcp) return;
+        if (kind == TransportKind::Utp && !utpUsable()) return;
+        std::string key = attemptKey(addr, kind, enc);
+        if (attemptTried_.count(key)) return;
+        attemptTried_.insert(key);  // reserve the combo so it is dialed at most once
+        retryQueue_.push_back({addr, kind, enc});
+        logDebug("engine: fallback %s -> %s/%s", addr.str().c_str(), kind == TransportKind::Utp ? "uTP" : "TCP",
+            enc == Encryption::Forced   ? "force"
+            : enc == Encryption::Prefer ? "prefer"
+                                        : "plain");
+    };
+
+    // Rung 1 — same carrier, MSE -> plaintext. This reproduces the pre-µTP fallback
+    // exactly: an MSE-preferring peer that never handshaked may simply not speak MSE.
+    if (wasEnc == Encryption::Prefer) {
+        tryEnqueue(wasKind, Encryption::Plaintext);
+        return;
+    }
+    // Rung 2 — escalate the carrier TCP -> µTP, restarting at the configured policy
+    // (so a µTP peer still prefers MSE). This is what widens the reachable pool.
+    if (wasKind == TransportKind::Tcp && utpUsable()) {
+        tryEnqueue(TransportKind::Utp, cfg_.encryption);
+        return;
+    }
+    // Exhausted: already on µTP, or µTP disabled, or a Forced/Plaintext TCP peer
+    // with no µTP available.
+}
+
 void TorrentEngine::connectPending() {
-    // Drop dead peers and release their in-flight requests.
+    // Drop dead peers, release their in-flight requests, and ladder the survivors
+    // that never reached their BitTorrent handshake onto the next carrier/encryption.
     for (auto it = peers_.begin(); it != peers_.end();) {
         if (!(*it)->alive()) {
-            // MSE plaintext fallback: a peer that never completed its BitTorrent
-            // handshake despite an MSE attempt may simply not speak MSE — retry it
-            // once in the clear so we don't shrink the reachable pool.
-            if (cfg_.encryption == Encryption::Prefer && (*it)->usedMse() && !(*it)->handshaked()) {
-                std::string key = (*it)->addr().str();
-                if (!plaintextTried_.count(key)) {
-                    plaintextTried_.insert(key);
-                    plaintextRetry_.push_back((*it)->addr());
-                }
+            if (!(*it)->handshaked()) {
+                TransportKind wasKind = (*it)->pollable() ? TransportKind::Tcp : TransportKind::Utp;
+                queueFallback((*it)->addr(), wasKind, (*it)->encryptionMode());
             }
             std::lock_guard<std::mutex> lk(pickerMutex_);
             if (picker_) picker_->releasePeer(it->get());
@@ -187,20 +237,23 @@ void TorrentEngine::connectPending() {
         }
     }
     while ((int)peers_.size() < cfg_.maxPeers) {
-        PeerAddr addr;
-        Encryption mode;
-        if (!plaintextRetry_.empty()) {
-            addr = plaintextRetry_.back();
-            plaintextRetry_.pop_back();
-            mode = Encryption::Plaintext;
+        PeerAttempt at;
+        if (!retryQueue_.empty()) {
+            at = retryQueue_.back();
+            retryQueue_.pop_back();
         } else {
             std::lock_guard<std::mutex> lk(peersMutex_);
             if (pendingPeers_.empty()) break;
-            addr = pendingPeers_.back();
+            at.addr = pendingPeers_.back();
             pendingPeers_.pop_back();
-            mode = cfg_.encryption;
+            // A fresh peer dials TCP first when enabled, else µTP (µTP-only mode).
+            at.transport = cfg_.enableTcp ? TransportKind::Tcp : TransportKind::Utp;
+            at.enc = cfg_.encryption;
+            attemptTried_.insert(attemptKey(at.addr, at.transport, at.enc));
         }
-        auto peer = std::make_unique<PeerConnection>(addr, this, mode);
+        auto transport = makeTransport(at.addr, at.transport);
+        if (!transport) continue;  // carrier unavailable (e.g. µTP disabled)
+        auto peer = std::make_unique<PeerConnection>(at.addr, this, std::move(transport), at.enc);
         if (peer->startConnect()) {
             peers_.push_back(std::move(peer));
         }
@@ -288,6 +341,7 @@ void TorrentEngine::scheduleBlockRequests() {
 }
 
 void TorrentEngine::onPeerHandshake(PeerConnection* peer) {
+    logInfo("engine: peer %s handshaked over %s", peer->addr().str().c_str(), peer->pollable() ? "TCP" : "uTP");
     if (metadataReady_) peer->onMetadataReady(metaNumPieces_);
 }
 
@@ -338,12 +392,14 @@ void TorrentEngine::engineLoop() {
     while (running_) {
         connectPending();
 
+        // Poll set: one fd per TCP peer, plus (once) the shared µTP UDP socket. µTP
+        // peers have no fd of their own — they are serviced through that one socket.
         std::vector<net::PollItem> items;
         std::vector<PeerConnection*> ptrs;
-        items.reserve(peers_.size());
+        items.reserve(peers_.size() + 1);
         ptrs.reserve(peers_.size());
         for (auto& p : peers_) {
-            if (!p->alive()) continue;
+            if (!p->alive() || !p->pollable()) continue;
             net::PollItem it;
             it.fd = p->handle();
             it.wantRead = true;
@@ -351,9 +407,18 @@ void TorrentEngine::engineLoop() {
             items.push_back(it);
             ptrs.push_back(p.get());
         }
+        bool utpActive = utpMgr_ && utpMgr_->active();
+        int udpIdx = -1;
+        if (utpActive) {
+            udpIdx = (int)items.size();
+            net::PollItem it;
+            it.fd = utpMgr_->udpHandle();
+            it.wantRead = true;
+            items.push_back(it);
+        }
 
         net::poll(items, 200);
-        for (size_t i = 0; i < items.size(); i++) {
+        for (size_t i = 0; i < ptrs.size(); i++) {
             PeerConnection* p = ptrs[i];
             if (!p->alive()) continue;
             if (items[i].error) {
@@ -362,6 +427,21 @@ void TorrentEngine::engineLoop() {
             }
             if (items[i].writable) p->onWritable();
             if (p->alive() && items[i].readable) p->onReadable();
+        }
+
+        // µTP: drain the shared UDP socket into libutp (fills rx buffers / fires
+        // state changes via callbacks), then service every µTP peer. State changes
+        // are callback-driven (no poll readiness), so each µTP peer is pumped every
+        // iteration: onWritable() runs the connect-check + flush, onReadable() drains
+        // the rx buffer and parses. Both are cheap no-ops when idle.
+        if (utpActive) {
+            if (udpIdx >= 0 && items[udpIdx].readable) utpMgr_->serviceReadable();
+            for (auto& p : peers_) {
+                if (!p->alive() || p->pollable()) continue;
+                p->onWritable();
+                if (p->alive()) p->onReadable();
+            }
+            utpMgr_->checkTimeouts(nowMs());
         }
 
         int64_t now = nowMs();
@@ -566,7 +646,14 @@ void TorrentEngine::close() {
         http_->stop();
         http_.reset();
     }
+    // Destroy peers (and their µTP transports -> utp_close, userdata detached)
+    // BEFORE the µTP context they close into. The engine thread has already joined,
+    // so libutp is touched single-threaded here.
     peers_.clear();
+    if (utpMgr_) {
+        utpMgr_->stop();  // utp_destroy + close the shared UDP socket
+        utpMgr_.reset();
+    }
     {
         std::lock_guard<std::mutex> lk(pickerMutex_);
         picker_.reset();

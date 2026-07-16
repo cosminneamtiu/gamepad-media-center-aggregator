@@ -16,6 +16,8 @@
       --max-peers <n>      cap peer connections (default 40)
       --no-webseed         disable the BEP-19 fallback
       --encryption <mode>  MSE/PE policy: plain | prefer | force (default prefer)
+      --transport <mode>   carrier: tcp | utp | both (default both = TCP + µTP
+                           fallback). utp = µTP only (BEP-29); tcp = legacy TCP only
 
     On success it prints a line   READY url=<local url>   on stdout; test scripts
     parse that, then curl -r / ffprobe the URL.
@@ -130,6 +132,21 @@ int main(int argc, char** argv) {
                 cfg.encryption = Encryption::Forced;
             } else {
                 fprintf(stderr, "unknown --encryption mode: %s (plain|prefer|force)\n", m.c_str());
+                return 2;
+            }
+        } else if (a == "--transport") {
+            std::string m = next("--transport");
+            if (m == "tcp") {
+                cfg.enableTcp = true;
+                cfg.enableUtp = false;
+            } else if (m == "utp") {
+                cfg.enableTcp = false;
+                cfg.enableUtp = true;
+            } else if (m == "both") {
+                cfg.enableTcp = true;
+                cfg.enableUtp = true;
+            } else {
+                fprintf(stderr, "unknown --transport mode: %s (tcp|utp|both)\n", m.c_str());
                 return 2;
             }
         } else if (!a.empty() && a[0] != '-') {

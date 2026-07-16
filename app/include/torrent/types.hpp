@@ -50,6 +50,15 @@ struct EngineConfig {
     bool enableWebSeed = true;                   // BEP-19 url-list fallback (cold-swarm robustness)
     bool enableTrackers = true;                  // BEP-3/12/15 announces
     bool enablePex = true;                       // BEP-11 peer exchange
+    // Transport carriers (transport.hpp). A fresh peer is dialed on TCP first (when
+    // enabled); a peer that dies before its BitTorrent handshake is retried on the
+    // other carrier — widening the reachable pool to peers only joinable over µTP
+    // (BEP-29), which matters behind NAT/CGNAT and on ISPs that throttle BT-over-TCP.
+    //   enableTcp + enableUtp (default) -> TCP first, µTP fallback
+    //   enableTcp only                  -> TCP only (pre-µTP behaviour)
+    //   enableUtp only                  -> µTP only (deterministic µTP testing)
+    bool enableTcp = true;
+    bool enableUtp = true;
     // MSE/PE: try encryption by default so the engine reaches the (majority of)
     // peers/ISPs that require or prefer it — the plaintext-only handshake was
     // reaching too few real peers (see TORRENT_STREAMING.md hardening notes).

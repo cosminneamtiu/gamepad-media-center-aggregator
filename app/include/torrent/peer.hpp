@@ -26,6 +26,7 @@
 #include "torrent/crypto.hpp"
 #include "torrent/mse.hpp"
 #include "torrent/socket.hpp"
+#include "torrent/transport.hpp"
 #include "torrent/types.hpp"
 
 namespace torrent {
@@ -51,13 +52,20 @@ class PeerConnection {
 public:
     enum class State { Idle, Connecting, MseHandshake, HandshakeWait, Ready, Closed };
 
-    PeerConnection(const PeerAddr& addr, PeerHost* host, Encryption enc = Encryption::Plaintext);
+    /// `transport` is the carrier (TcpTransport or a µTP transport from the
+    /// UtpManager) — the engine picks it per its connection policy. The peer state
+    /// machine (handshake / MSE / wire messages) is identical on either carrier.
+    PeerConnection(const PeerAddr& addr, PeerHost* host, std::unique_ptr<PeerTransport> transport,
+        Encryption enc = Encryption::Plaintext);
 
     bool startConnect();
     void close();
 
     // ---- event-loop hooks ----
-    net::Handle handle() const { return sock_.handle(); }
+    net::Handle handle() const { return transport_ ? transport_->handle() : net::invalidHandle(); }
+    /// True for a TCP peer (its fd goes in the engine's select() set); false for a
+    /// µTP peer (serviced through the shared UDP socket instead).
+    bool pollable() const { return transport_ && transport_->pollable(); }
     bool wantWrite() const;  // connecting, or bytes queued
     bool alive() const { return state_ != State::Closed; }
     void onReadable();
@@ -80,6 +88,9 @@ public:
     /// clear-text reconnect).
     bool usedMse() const { return enc_ != Encryption::Plaintext; }
     bool handshaked() const { return handshakeParsed_; }
+    /// The encryption policy this connection was started with — the engine's
+    /// TCP/µTP fallback ladder reads it to decide the next attempt.
+    Encryption encryptionMode() const { return enc_; }
 
     // ---- actions the scheduler issues ----
     void sendInterested();
@@ -106,7 +117,7 @@ private:
 
     PeerAddr addr_;
     PeerHost* host_;
-    net::TcpSocket sock_;
+    std::unique_ptr<PeerTransport> transport_;  // TCP or µTP carrier (see transport.hpp)
     State state_ = State::Idle;
     Encryption enc_ = Encryption::Plaintext;
 

@@ -59,6 +59,8 @@ liftable sur les toolchains console derrière le shim socket.
 | Log | `log.{hpp,cpp}` | hook de log (stderr par défaut ; branché sur `brls::Logger` à l'intégration) | ✅ |
 | Util | `util.{hpp,cpp}` | horloge monotone, aléa, peer id | ✅ |
 | Socket shim | `socket.{hpp,cpp}` | TCP non-bloquant + UDP + `select()`, **impl POSIX** ; seams libnx/SceNet/openorbis | ✅ POSIX / 🟡 seams console |
+| Transport | `transport.{hpp,cpp}` | abstraction porteur : `TcpTransport` (TCP) ou µTP, sous `PeerConnection` | ✅ prouvé |
+| µTP | `utp.{hpp,cpp}` + `app/vendor/libutp/` | BEP-29 (libutp vendoré, MIT) : 1 socket UDP partagée, callbacks → shim | ✅ prouvé (byte-for-byte via µTP + MSE-sur-µTP) |
 | Metadata | `metadata.{hpp,cpp}` | parse magnet/hex/base32, .torrent, info dict (BEP-9), `url-list` (BEP-19), `announce-list` (BEP-12) | ✅ prouvé |
 | HTTP client | `http_client.{hpp,cpp}` | libcurl : trackers HTTP + web seeds | ✅ prouvé |
 | Storage | `storage.{hpp,cpp}` | pièces en RAM, vérif SHA-1, lecture bloquante pour HTTP, éviction (fenêtre glissante) | ✅ prouvé (éviction non stressée) |
@@ -130,6 +132,43 @@ Détails :
   la pièce metadata appendés après le dict — la frontière est donnée par le span
   `end` du décodeur bencode.
 - **PEX (BEP-11)** : clé `added` = peers compacts IPv4 (6 octets) → nouveaux peers.
+
+---
+
+## 4bis. Transport TCP / µTP (BEP-29) — `transport.hpp`, `utp.hpp`
+
+Le `PeerConnection` parle le protocole wire au-dessus d'un **flux d'octets ordonné
+et fiable** ; ce flux est abstrait par `PeerTransport` (transport-agnostique). Deux
+porteurs :
+
+- **`TcpTransport`** : fine enveloppe du shim TCP non-bloquant (chemin d'origine,
+  inchangé — 1 fd/pair, poll par la boucle).
+- **µTP (`UtpManager` + transport µTP)** : LEDBAT sur UDP via **libutp vendoré**
+  (`app/vendor/libutp/`, MIT). **Une seule socket UDP** partagée multiplexe tous les
+  pairs µTP (libutp les distingue par (adresse, connection id)). libutp est piloté
+  par callbacks (pas par poll) : la boucle ajoute le fd UDP partagé à son `select()`,
+  et sur lecture `serviceReadable()` draine les datagrammes dans `utp_process_udp`.
+  libutp rappelle alors : `SENDTO` → on émet un datagramme via le shim UDP ;
+  `ON_READ` → octets applicatifs vers le transport du pair ; `ON_STATE_CHANGE` /
+  `ON_ERROR` → connect/writable/eof/erreur. `checkTimeouts()` pompe les timers
+  (retransmission, LEDBAT) toutes les ~500 ms.
+
+**MSE au-dessus de µTP** : le transport n'étant qu'un tuyau d'octets, le handshake
+MSE/PE + RC4 fonctionne **verbatim** sur µTP comme sur TCP (prouvé, cf. §11).
+
+**Politique de connexion** (`EngineConfig::enableTcp` / `enableUtp`, défaut les deux) :
+un pair frais est composé en TCP d'abord ; un pair qui **meurt avant son handshake
+BitTorrent** est re-tenté sur l'échelle de repli **MSE→plaintext (même porteur) puis
+TCP→µTP** (chaque combo au plus une fois par endpoint). But : élargir le pool de
+pairs joignables (derrière NAT/CGNAT, ISPs qui throttlent le BT-sur-TCP). Réglages :
+`enableTcp` seul = TCP only (comportement pré-µTP) ; `enableUtp` seul = µTP only
+(test déterministe). **Portabilité** : UDP via le shim (POSIX/libnx/openorbis/SceNet) ;
+libutp est du transport pur (ni TLS ni Boost), compile sous devkitA64 et vitasdk
+(un shim `IN6_IS_ADDR_V4MAPPED` force-inclus côté Vita).
+
+**Modèle éphémère** : `close()` détruit les pairs (→ `utp_close`, userdata détaché
+pour éviter tout use-after-free) **avant** le contexte libutp (`utp_destroy` + socket
+UDP fermée), une fois le thread moteur joint (libutp mono-thread).
 
 ---
 
@@ -289,8 +328,7 @@ Le câblage futur :
 | **Web seed multi-fichier** | Mono-fichier seulement (`meta_.files.size()==1`) ; mapping pièce↔fichiers = TODO |
 | **Éviction RAM** | Implémentée, non stressée (fichiers de test < budget) |
 | **Shims console** (libnx/SceNet/openorbis) | Seams documentés, **non codés** (POSIX only) |
-| **MSE/PE (chiffrement pair)** | Non implémenté → réduit le pool de pairs TCP joignables sur le vrai swarm |
-| **µTP (BEP-29)** | Hors périmètre (comme décidé) |
+| **µTP (BEP-29)** | ✅ Implémenté (libutp vendoré, `app/vendor/libutp/`) derrière une abstraction de transport (`transport.hpp`) ; **prouvé** : download byte-for-byte via µTP contre `transmission-cli` (transport=µTP loggé + md5), MSE-sur-µTP (transmission `-er`), recompiles Switch/Vita. Voir §4bis. |
 | **DHT (BEP-5)** | Hors périmètre PoC ; réutiliser jech/dht plus tard |
 
 ### Limite rencontrée (honnête)

@@ -243,7 +243,15 @@ endif ()
 
 if (USE_LIBUSBHSFS)
     find_library(USBHSFS_LIB NAMES usbhsfs REQUIRED)
-    list(APPEND APP_PLATFORM_LIB lwext4 ntfs-3g usbhsfs)
+    # libusbhsfs référence des symboles ext4_*/ntfs_* définis dans lwext4 et
+    # ntfs-3g (pilotes de systèmes de fichiers). En lien statique mono-passe, la
+    # lib qui RÉFÉRENCE doit précéder celles qui DÉFINISSENT ; l'ordre historique
+    # (définisseurs d'abord) ne résolvait que parce que --gc-sections écartait le
+    # code de montage FS non atteint. L'intégration torrent a modifié le link et
+    # fait ressortir les undefined ext4_/ntfs_. On regroupe les trois libs
+    # interdépendantes dans un --start-group/--end-group : résolution multi-passe,
+    # indépendante de l'ordre, que ENABLE_TORRENT soit ON ou OFF.
+    list(APPEND APP_PLATFORM_LIB -Wl,--start-group lwext4 ntfs-3g usbhsfs -Wl,--end-group)
     list(APPEND APP_PLATFORM_OPTION -DUSE_LIBUSBHSFS)
 endif ()
 
@@ -384,16 +392,20 @@ if (ENABLE_TORRENT)
     message(STATUS "ENABLE_TORRENT=ON — building torrent engine + PoC (separate target)")
     add_subdirectory(torrent)
 
-    # Desktop integration: link the engine into the app and turn on the gated
-    # playback path (resolvePlayback -> local HTTP URL, source UI, teardown). Only
-    # desktop for now — the console socket shims are not yet wired for the GUI, so
-    # on Switch/Vita/PS4 (and with the option OFF everywhere) the app is unchanged:
+    # App integration: link the engine into the app and turn on the gated playback
+    # path (resolvePlayback -> local HTTP URL, source UI, live buffering overlay,
+    # teardown). Enabled on DESKTOP and SWITCH: the Switch socket shim (libnx bsd)
+    # is wired and verified (socket.cpp #if __SWITCH__), and torrent/CMakeLists
+    # already resolves curl/mbedtls from the switch-* portlibs via pkg-config +
+    # links mbedcrypto for the SHA-1 backend. Vita/PS4 keep their socket seams
+    # compile-verified only, so they are NOT integrated into the GUI yet. With the
+    # option OFF everywhere (the default) the app is byte-for-byte unchanged:
     # ENABLE_TORRENT is defined for the app ONLY here, and every integration site
     # is behind `#if defined(ENABLE_TORRENT)`. The bridge glue (session.cpp) lives
     # under app/src/torrent/ — already carved out of the app GLOB — and is added to
     # the app target explicitly so it never enters a non-integrated build.
-    if (PLATFORM_DESKTOP)
-        message(STATUS "ENABLE_TORRENT + desktop — integrating torrent playback into the app")
+    if (PLATFORM_DESKTOP OR PLATFORM_SWITCH)
+        message(STATUS "ENABLE_TORRENT — integrating torrent playback into the app (desktop/switch)")
         target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/app/src/torrent/session.cpp)
         target_link_libraries(${PROJECT_NAME} PRIVATE torrent_engine)
         target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_TORRENT)

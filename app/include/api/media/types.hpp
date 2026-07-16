@@ -205,8 +205,9 @@ struct Media {
 #if defined(ENABLE_TORRENT)
     // Torrent source (SourceKind::Torrent): the raw infoHash, the chosen file
     // index and the addon-provided tracker/DHT hints the on-device engine needs.
-    // Only populated by the Stremio mapper when the engine is built in (desktop,
-    // ENABLE_TORRENT); left empty everywhere else. See TORRENT_STREAMING.md §3.
+    // Only populated by the Stremio mapper when the engine is built in
+    // (desktop/switch, ENABLE_TORRENT); left empty everywhere else. See
+    // TORRENT_STREAMING.md §3.
     std::string infoHash;
     int torrentFileIdx = -1;
     std::vector<std::string> torrentSources;  // "tracker:<url>" / "dht:<id>" hints

@@ -24,7 +24,7 @@
 #include "api/media/langs.hpp"
 #include "utils/config.hpp"
 #if defined(ENABLE_TORRENT)
-#include "torrent/session.hpp"  // on-device torrent streaming (desktop, gated)
+#include "torrent/session.hpp"  // on-device torrent streaming (desktop/switch, gated)
 #endif
 #include <borealis/core/logger.hpp>
 #include <borealis/core/thread.hpp>
@@ -968,7 +968,7 @@ media::PlaybackSource StremioBackend::resolvePlayback(
     // (which does not wrap tasks in try/catch) would abort the app.
 #if defined(ENABLE_TORRENT)
     if (version.kind == media::SourceKind::Torrent && !version.infoHash.empty()) {
-        // On-device torrent streaming (desktop). Stand up (or reuse) the single
+        // On-device torrent streaming (desktop/switch). Stand up (or reuse) the single
         // ephemeral engine, open the infoHash+fileIdx, and hand mpv the local HTTP
         // URL it serves. open() may block on metadata (cold magnet) — fine, we run
         // inside the player's brls::async worker; the swarm buffering then happens

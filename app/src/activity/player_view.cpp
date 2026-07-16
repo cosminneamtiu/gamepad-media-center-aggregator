@@ -18,7 +18,7 @@
 #include "view/video_profile.hpp"
 #include "view/audio_player.hpp"
 #if defined(ENABLE_TORRENT)
-#include "torrent/session.hpp"  // ephemeral on-device torrent engine (desktop, gated)
+#include "torrent/session.hpp"  // ephemeral on-device torrent engine (desktop/switch, gated)
 #endif
 
 using namespace brls::literals;
@@ -83,6 +83,11 @@ PlayerView::PlayerView(const plex::Item& item, const int64_t seekMs, int version
             break;
         case MpvEventEnum::LOADING_END:
             this->reportTimeline("playing", int64_t(mpv.playback_time) * 1000);
+#if defined(ENABLE_TORRENT)
+            // mpv finished its initial buffering from the local torrent HTTP server
+            // — playback really started, so retire the P2P buffering overlay.
+            this->hideTorrentOverlay();
+#endif
             break;
         case MpvEventEnum::MPV_STOP:
             this->mpvLoaded = false;
@@ -107,6 +112,11 @@ PlayerView::PlayerView(const plex::Item& item, const int64_t seekMs, int version
             break;
         }
         case MpvEventEnum::UPDATE_PROGRESS:
+#if defined(ENABLE_TORRENT)
+            // Safety net: the clock is advancing, so playback is under way even if
+            // LOADING_END was missed — make sure the buffering overlay is gone.
+            if (this->torrentBuffering && mpv.video_progress > 0) this->hideTorrentOverlay();
+#endif
             // report cadence: every 10 s
             if (mpv.video_progress % 10 == 0) {
                 this->reportTimeline("playing", int64_t(mpv.video_progress) * 1000);
@@ -159,6 +169,9 @@ PlayerView::~PlayerView() {
     // Free the server-side transcode session on exit (else it lingers orphaned).
     this->stopTranscode();
 #if defined(ENABLE_TORRENT)
+    // Stop the buffering-overlay ticker before we go (its callback captures this).
+    // The RepeatingTimer would also self-stop on destruction, but do it explicitly.
+    this->hideTorrentOverlay();
     // Ephemeral torrent engine: tear it down when the player goes away (no-op when
     // this playback was not a torrent). The teardown is detached, so this returns
     // immediately (TORRENT_STREAMING.md §1 — moteur détruit à l'arrêt).
@@ -336,12 +349,15 @@ void PlayerView::startPlayback(const int64_t seekMs, bool forceDirect) {
     media::Media version = this->stream;
 
 #if defined(ENABLE_TORRENT)
-    // Minimal buffering feedback: resolvePlayback below blocks (on the worker) while
-    // the engine acquires metadata + finds peers, and mpv's own buffering spinner
-    // only kicks in once it has the URL. Tell the user the P2P connection is
-    // starting. TODO: a live peers/speed/% overlay driven by EngineSession::stats().
+    // Live buffering feedback: resolvePlayback below blocks (on the worker) while the
+    // engine acquires metadata + finds peers, and mpv's own buffering spinner only
+    // kicks in once it has the URL. Put up the live P2P overlay (peers / ⬇ speed /
+    // buffered %) for the whole window; it retires itself when playback starts. A
+    // non-torrent source hides any overlay left over from a previous torrent.
     if (version.kind == media::SourceKind::Torrent && !version.infoHash.empty())
-        brls::Application::notify("main/stremio/source/torrent_buffering"_i18n);
+        this->showTorrentOverlay();
+    else
+        this->hideTorrentOverlay();
 #endif
 
     ASYNC_RETAIN
@@ -524,3 +540,87 @@ bool PlayerView::toggleQuality() {
     brls::Application::pushActivity(new brls::Activity(dropdown));
     return true;
 }
+
+#if defined(ENABLE_TORRENT)
+// --- torrent buffering overlay ---------------------------------------------------
+//
+// A non-focusable pill (spinner + one live label) laid on top of the VideoView.
+// Built once, lazily, on the first torrent playback; a brls::RepeatingTimer samples
+// torrent::EngineSession::stats() on the main thread and rewrites the label. It is
+// retired the moment playback really starts (LOADING_END / first progress) or the
+// player is destroyed. Reuses the borealis player idioms (Box / ProgressSpinner /
+// Label) and never registers a focusable view, so OSD navigation is untouched.
+
+void PlayerView::showTorrentOverlay() {
+    if (this->torrentOverlay == nullptr) {
+        auto* box = new brls::Box();
+        box->setAxis(brls::Axis::ROW);
+        box->setAlignItems(brls::AlignItems::CENTER);
+        box->setPositionType(brls::PositionType::ABSOLUTE);
+        box->setPositionTop(120);
+        box->setPositionLeft(40);
+        box->setCornerRadius(6);
+        box->setBackgroundColor(nvgRGBA(0, 0, 0, 0xC0));
+        box->setPadding(8, 16, 8, 14);
+        box->setFocusable(false);
+
+        auto* spinner = new brls::ProgressSpinner();
+        spinner->setWidth(22);
+        spinner->setHeight(22);
+        spinner->setMarginRight(12);
+        box->addView(spinner);
+
+        this->torrentOverlayLabel = new brls::Label();
+        this->torrentOverlayLabel->setFontSize(16);
+        this->torrentOverlayLabel->setTextColor(nvgRGB(255, 255, 255));
+        this->torrentOverlayLabel->setSingleLine(true);
+        box->addView(this->torrentOverlayLabel);
+
+        this->torrentOverlay = box;
+        this->addView(this->torrentOverlay);  // added after the VideoView -> drawn on top
+
+        this->torrentTicker.setCallback([this]() { this->updateTorrentOverlay(); });
+    }
+
+    // Reset to the "connecting to the swarm" state; the first sample lands right away.
+    this->torrentOverlayLabel->setText("main/stremio/source/torrent_buffering"_i18n);
+    this->torrentOverlay->setVisibility(brls::Visibility::VISIBLE);
+    this->torrentBuffering = true;
+    this->torrentTicker.start(800);  // ~1.25 samples/s, main-thread (RepeatingTimer)
+    this->updateTorrentOverlay();
+}
+
+void PlayerView::updateTorrentOverlay() {
+    if (!this->torrentBuffering || this->torrentOverlayLabel == nullptr) return;
+    torrent::Stats st = torrent::EngineSession::instance().stats();
+
+    std::string text;
+    if (!st.metadataReady || st.peersConnected == 0) {
+        // Still bootstrapping (fetching metadata / discovering peers): keep the
+        // connecting line — the log below carries the granular state for diagnostics.
+        text = "main/stremio/source/torrent_buffering"_i18n;
+    } else {
+        // ⬇ speed  ·  N peers  ·  P% — speed unit and % are language-neutral; only the
+        // peer word is localized (torrent_peers = "{} peers", one positional arg).
+        std::string speed =
+            st.downloadRateBps > 0 ? misc::formatSize((uint64_t)st.downloadRateBps) + "/s" : "0KB/s";
+        int pct = st.piecesTotal > 0 ? (int)(100.0 * st.piecesHave / st.piecesTotal) : 0;
+        std::string peers =
+            fmt::format(fmt::runtime("main/stremio/source/torrent_peers"_i18n), st.peersConnected);
+        text = fmt::format("⬇ {}  ·  {}  ·  {}%", speed, peers, pct);
+    }
+    this->torrentOverlayLabel->setText(text);
+
+    // Buffering diagnostics (also the proof-of-refresh trace asked for by the spec).
+    brls::Logger::debug(
+        "torrent buffering: meta={} peers={}/{} rate={:.0f}B/s pieces={}/{} contiguous={}B webseeds={}",
+        st.metadataReady, st.peersConnected, st.peersKnown, st.downloadRateBps, st.piecesHave, st.piecesTotal,
+        st.contiguousReadyBytes, st.webSeeds);
+}
+
+void PlayerView::hideTorrentOverlay() {
+    this->torrentBuffering = false;
+    this->torrentTicker.stop();
+    if (this->torrentOverlay) this->torrentOverlay->setVisibility(brls::Visibility::GONE);
+}
+#endif

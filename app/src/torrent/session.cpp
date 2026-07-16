@@ -2,7 +2,7 @@
     GMCA — TorrentEngine session holder (see torrent/session.hpp).
 
     This file is app-integration glue, NOT part of the standalone engine target:
-    it is compiled into the app only when ENABLE_TORRENT is set (desktop), and is
+    it is compiled into the app only when ENABLE_TORRENT is set (desktop/switch), and is
     excluded from the app source GLOB otherwise (root CMakeLists). It therefore
     lives under app/src/torrent/ (already carved out of the GLOB) and is added to
     the app target explicitly.

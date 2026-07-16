@@ -12,7 +12,7 @@
     detached thread so the UI-thread destructor never blocks; the next open()
     joins it before starting, preserving the one-at-a-time invariant.
 
-    Compiled into the app only when ENABLE_TORRENT (desktop) — see the root
+    Compiled into the app only when ENABLE_TORRENT (desktop/switch) — see the root
     CMakeLists integration block. Not referenced anywhere when the option is OFF.
 */
 

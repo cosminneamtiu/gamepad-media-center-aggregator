@@ -33,8 +33,9 @@ public:
 
     /// True if ANY loaded addon advertises `resource` (type/id agnostic). Used to
     /// decide whether to hint the user to install one (e.g. no "subtitles" addon).
-    /// Returns true while the manifests are not loaded yet, so a not-yet-ready
-    /// engine never surfaces a misleading "install an addon" hint.
+    /// UI-thread safe: uses try_lock and returns true when the manifests are not
+    /// loaded yet OR the lock is contended (worker mid-load), so a not-yet-ready
+    /// engine never blocks the UI nor surfaces a misleading "install an addon" hint.
     bool hasResource(const std::string& resource) const;
 
     /// Every (addon, catalog) pair across all addons that serve "catalog".

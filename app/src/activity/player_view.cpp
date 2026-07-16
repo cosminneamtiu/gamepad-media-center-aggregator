@@ -287,9 +287,9 @@ void PlayerView::playMedia(const int64_t seekMs) {
 void PlayerView::startPlayback(const int64_t seekMs, bool forceDirect) {
     // We are about to (re)load: mpv will drop any sub-add'ed tracks. Clear the
     // loaded flag so a subtitle fetch landing mid-load waits for MPV_LOADED to
-    // re-add, and (re)resolve external subtitles for the current item.
+    // re-add. (External subtitles are resolved AFTER the playback task is queued
+    // — see the note at the end of this function.)
     this->mpvLoaded = false;
-    this->resolveExternalSubtitles();
 
     media::PlaybackOptions opts;
     opts.seekMs = seekMs;
@@ -343,6 +343,16 @@ void PlayerView::startPlayback(const int64_t seekMs, bool forceDirect) {
             });
         }
     });
+
+    // Resolve external subtitles AFTER queuing the playback task above. brls::async
+    // is a single FIFO worker thread (not a pool): the Stremio subtitle fan-out
+    // (ensureLoaded + one getSync per subtitles addon, up to a 15 s timeout each)
+    // would otherwise run to completion BEFORE the fast resolvePlayback task and
+    // stall the video start behind it. Queuing playback first lets mpv start
+    // loading while subtitles resolve; the mpvLoaded/addExternalSubtitles handoff
+    // adds them whenever the fetch lands. (No-op for Plex/Jellyfin: getSubtitles
+    // returns synchronously.)
+    this->resolveExternalSubtitles();
 }
 
 void PlayerView::resolveExternalSubtitles() {

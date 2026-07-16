@@ -202,8 +202,27 @@ struct Media {
     std::string detail;  // secondary line: codec · size · seeders (our own re-render)
     SourceKind kind = SourceKind::Direct;
     bool cached = true;  // debrid cache hint (best-effort; ⚡ vs pending). false = uncached
+#if defined(ENABLE_TORRENT)
+    // Torrent source (SourceKind::Torrent): the raw infoHash, the chosen file
+    // index and the addon-provided tracker/DHT hints the on-device engine needs.
+    // Only populated by the Stremio mapper when the engine is built in (desktop,
+    // ENABLE_TORRENT); left empty everywhere else. See TORRENT_STREAMING.md §3.
+    std::string infoHash;
+    int torrentFileIdx = -1;
+    std::vector<std::string> torrentSources;  // "tracker:<url>" / "dht:<id>" hints
+    // A source is playable iff it carries a real URL (parts[0].key) OR — with the
+    // engine built in — it is a raw-infoHash torrent the engine can stand up. The
+    // torrent keeps `parts` EMPTY on purpose: resolvePlayback mints the local HTTP
+    // URL only at play time, and the empty part lets the playable-first sort still
+    // rank already-resolved (direct/debrid) URLs ahead of it (resolveAllStreams).
+    bool playable() const {
+        if (!parts.empty() && !parts.front().key.empty()) return true;
+        return kind == SourceKind::Torrent && !infoHash.empty();
+    }
+#else
     // A source is directly playable iff it carries a real URL (parts[0].key).
     bool playable() const { return !parts.empty() && !parts.front().key.empty(); }
+#endif
 };
 inline void from_json(const nlohmann::json& j, Media& r) {
     r.id = jint(j, "id");

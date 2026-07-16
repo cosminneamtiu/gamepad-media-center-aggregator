@@ -88,8 +88,18 @@ elseif (CMAKE_INSTALL)
     set(BRLS_RESOURCES_DIR ${CMAKE_INSTALL_PREFIX}/share/gmca)
 endif ()
 
+# On-device torrent streaming engine (feat/stremio-torrent-support). OFF by
+# default so the Switch/Vita/PS4/desktop app builds are byte-for-byte unaffected.
+# The engine lives under app/src/torrent/** but is built as a SEPARATE target
+# (see torrent/CMakeLists.txt), never linked into the app yet — integration into
+# resolvePlayback/streamToMedia is a later, gated step. We therefore ALWAYS carve
+# its sources out of the app GLOB, so nothing changes for the app whether the
+# option is ON or OFF.
+option(ENABLE_TORRENT "Build the on-device torrent streaming engine + PoC (separate target)" OFF)
+
 # setting src and include
 file(GLOB_RECURSE MAIN_SRC "${PROJECT_SOURCE_DIR}/app/src/*.cpp")
+list(FILTER MAIN_SRC EXCLUDE REGEX "/app/src/torrent/")
 if (PLATFORM_SWITCH)
     # System service initialization functions required for libnx
     list(APPEND MAIN_SRC ${BOREALIS_LIBRARY}/lib/platforms/switch/switch_wrapper.c)
@@ -365,4 +375,27 @@ elseif (PLATFORM_PS4)
         COMMAND "${CMAKE_COMMAND}" -E copy_directory ${BOREALIS_DIR}/ps4/sce_sys/about ${CMAKE_BINARY_DIR}/ps4/sce_sys/about
         COMMAND "${CMAKE_COMMAND}" -E copy_directory ${PROJECT_RESOURCES} ${CMAKE_BINARY_DIR}/ps4/resources
     )
+endif ()
+
+# Optional: build the torrent engine + PoC as a separate target tree. Only the
+# desktop PoC is wired for now; the console shims are documented seams (see
+# app/include/torrent/socket.hpp) and are enabled per-port later.
+if (ENABLE_TORRENT)
+    message(STATUS "ENABLE_TORRENT=ON — building torrent engine + PoC (separate target)")
+    add_subdirectory(torrent)
+
+    # Desktop integration: link the engine into the app and turn on the gated
+    # playback path (resolvePlayback -> local HTTP URL, source UI, teardown). Only
+    # desktop for now — the console socket shims are not yet wired for the GUI, so
+    # on Switch/Vita/PS4 (and with the option OFF everywhere) the app is unchanged:
+    # ENABLE_TORRENT is defined for the app ONLY here, and every integration site
+    # is behind `#if defined(ENABLE_TORRENT)`. The bridge glue (session.cpp) lives
+    # under app/src/torrent/ — already carved out of the app GLOB — and is added to
+    # the app target explicitly so it never enters a non-integrated build.
+    if (PLATFORM_DESKTOP)
+        message(STATUS "ENABLE_TORRENT + desktop — integrating torrent playback into the app")
+        target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/app/src/torrent/session.cpp)
+        target_link_libraries(${PROJECT_NAME} PRIVATE torrent_engine)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_TORRENT)
+    endif ()
 endif ()

@@ -479,6 +479,13 @@ struct StreamOption {
     std::string externalUrl;  // open in browser / external app
     std::string infoHash;     // torrent
     int fileIdx = -1;         // torrent file index
+#if defined(ENABLE_TORRENT)
+    // Addon-provided peer discovery hints for a torrent stream ("tracker:<url>",
+    // "dht:<id>"). Torrentio & co. ship these in `sources`; the on-device engine
+    // turns the trackers into magnet `tr=` params so a bare infoHash can find
+    // peers without DHT. Only read when the engine is built in.
+    std::vector<std::string> sources;
+#endif
     bool notWebReady = false;
     std::string bingeGroup;
 };
@@ -496,6 +503,9 @@ inline std::vector<StreamOption> parseStreams(const nlohmann::json& j) {
         so.externalUrl = jstr(s, "externalUrl");
         so.infoHash = jstr(s, "infoHash");
         so.fileIdx = (int)jint(s, "fileIdx", -1);
+#if defined(ENABLE_TORRENT)
+        so.sources = stringArray(s, "sources");  // tracker:/dht: hints (torrent)
+#endif
         auto bh = s.find("behaviorHints");
         if (bh != s.end() && bh->is_object()) {
             so.notWebReady = jbool(*bh, "notWebReady");
@@ -673,8 +683,9 @@ inline bool detectDebrid(const std::string& name, bool& cached) {
 
 /// Map one Stremio stream to a neutral source row. `addonName` (manifest name)
 /// is the reliable provenance label (the addon brand inside `name` is not always
-/// present). Only `url` streams are playable here; infoHash/ytId/externalUrl are
-/// classified as non-playable (no torrent engine / no browser on console).
+/// present). `url` streams are playable; a raw infoHash is playable too when the
+/// on-device engine is built in (ENABLE_TORRENT), otherwise it — like ytId/
+/// externalUrl — is classified as non-playable (no torrent engine / no browser).
 inline media::Media streamToMedia(const StreamOption& s, const std::string& addonName) {
     media::Media m;
     std::string blob = s.name + " " + s.title;
@@ -702,6 +713,21 @@ inline media::Media streamToMedia(const StreamOption& s, const std::string& addo
         m.detail = detail;
     } else if (!s.infoHash.empty()) {
         m.kind = media::SourceKind::Torrent;
+#if defined(ENABLE_TORRENT)
+        // With the on-device engine built in, a raw-infoHash torrent becomes a
+        // playable P2P source: carry the infoHash/fileIdx/discovery hints through
+        // to resolvePlayback (which stands up the local HTTP URL), and render the
+        // same codec · size detail as a URL source so the picker can rank/label it.
+        m.infoHash = s.infoHash;
+        m.torrentFileIdx = s.fileIdx;
+        m.torrentSources = s.sources;
+        std::string codec = parseCodecLabel(blob);
+        std::string size = parseSizeLabel(s.title.empty() ? s.name : s.title);
+        std::string detail;
+        if (!codec.empty()) detail = codec;
+        if (!size.empty()) detail += (detail.empty() ? "" : "  ·  ") + size;
+        m.detail = detail;
+#endif
     } else if (!s.ytId.empty()) {
         m.kind = media::SourceKind::Youtube;
     } else {

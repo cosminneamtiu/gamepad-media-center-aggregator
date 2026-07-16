@@ -17,6 +17,9 @@
 #include "view/video_view.hpp"
 #include "view/video_profile.hpp"
 #include "view/audio_player.hpp"
+#if defined(ENABLE_TORRENT)
+#include "torrent/session.hpp"  // ephemeral on-device torrent engine (desktop, gated)
+#endif
 
 using namespace brls::literals;
 
@@ -155,6 +158,12 @@ PlayerView::~PlayerView() {
     if (!mpv.isStopped()) this->reportStop();
     // Free the server-side transcode session on exit (else it lingers orphaned).
     this->stopTranscode();
+#if defined(ENABLE_TORRENT)
+    // Ephemeral torrent engine: tear it down when the player goes away (no-op when
+    // this playback was not a torrent). The teardown is detached, so this returns
+    // immediately (TORRENT_STREAMING.md §1 — moteur détruit à l'arrêt).
+    torrent::EngineSession::instance().close();
+#endif
     brls::Application::getExitEvent()->unsubscribe(this->exitSubscribeID);
     brls::Logger::debug("trying delete PlayerView...");
 }
@@ -224,6 +233,13 @@ void PlayerView::playMedia(const int64_t seekMs) {
     // Without it each reload orphaned a server-side session (verified on dev:
     // they stack up at ~0% progress and never free), starving new transcodes.
     this->stopTranscode();
+#if defined(ENABLE_TORRENT)
+    // Drop any torrent engine from the previous source before (re)loading — episode
+    // navigation, quality/track switches, transcode->direct. A torrent (re)start
+    // re-opens a fresh one in resolvePlayback; switching to a non-torrent source
+    // frees it here so it never lingers (one playback at a time).
+    torrent::EngineSession::instance().close();
+#endif
     // deliberate (re)start: allow the direct-play fallback to trigger again
     this->directPlayFallback = false;
 
@@ -235,6 +251,12 @@ void PlayerView::playMedia(const int64_t seekMs) {
         auto accessible = [](const plex::Media& m) {
             for (auto& p : m.parts)
                 if (p.accessible && p.exists && !p.key.empty()) return true;
+#if defined(ENABLE_TORRENT)
+            // A raw-infoHash torrent carries no part yet (the engine mints the URL
+            // at resolve time) — treat it as accessible so the chosen source
+            // survives to resolvePlayback instead of being skipped for lack of key.
+            if (m.kind == media::SourceKind::Torrent && !m.infoHash.empty()) return true;
+#endif
             return false;
         };
         if (this->preferredVersion >= 0 && this->preferredVersion < (int)this->item.media.size() &&
@@ -260,6 +282,9 @@ void PlayerView::playMedia(const int64_t seekMs) {
             auto accessible = [](const plex::Media& m) {
                 for (auto& p : m.parts)
                     if (p.accessible && p.exists && !p.key.empty()) return true;
+#if defined(ENABLE_TORRENT)
+                if (m.kind == media::SourceKind::Torrent && !m.infoHash.empty()) return true;
+#endif
                 return false;
             };
             if (this->preferredVersion >= 0 && this->preferredVersion < (int)this->item.media.size() &&
@@ -309,6 +334,15 @@ void PlayerView::startPlayback(const int64_t seekMs, bool forceDirect) {
     // copies for the worker thread (avoids racing on this->item during a switch)
     media::Item item = this->item;
     media::Media version = this->stream;
+
+#if defined(ENABLE_TORRENT)
+    // Minimal buffering feedback: resolvePlayback below blocks (on the worker) while
+    // the engine acquires metadata + finds peers, and mpv's own buffering spinner
+    // only kicks in once it has the URL. Tell the user the P2P connection is
+    // starting. TODO: a live peers/speed/% overlay driven by EngineSession::stats().
+    if (version.kind == media::SourceKind::Torrent && !version.infoHash.empty())
+        brls::Application::notify("main/stremio/source/torrent_buffering"_i18n);
+#endif
 
     ASYNC_RETAIN
     brls::async([ASYNC_TOKEN, item, version, opts]() {

@@ -658,6 +658,36 @@ inline media::Media streamToMedia(const StreamOption& s, const std::string& addo
     return m;
 }
 
+/// ---- Subtitles (subtitles resource) ----------------------------------------
+//
+// `{base}/subtitles/{type}/{encId}.json` returns { subtitles: [{ id, url, lang }] }
+// (SDK: docs/api/responses/subtitles.md). `url` is an ABSOLUTE http(s) link to a
+// SRT/VTT file, `lang` an ISO 639-2 code (or free text when no valid code). We
+// query WITHOUT the optional videoHash/videoSize extras (OpenSubtitles-style hash
+// matching): that would need range reads of the remote/debrid file per playback —
+// too costly on console. Id-based matching (imdbId / episode id) is enough; any
+// residual desync is handled by the player's existing sub-delay (subsync) control.
+
+struct SubtitleOption {
+    std::string id;
+    std::string url;   // absolute http(s) URL to the subtitle file (SRT/VTT)
+    std::string lang;  // ISO 639-2 code, or free text (SDK fallback)
+};
+
+inline std::vector<SubtitleOption> parseSubtitles(const nlohmann::json& j) {
+    std::vector<SubtitleOption> out;
+    auto subs = j.find("subtitles");
+    if (subs == j.end() || !subs->is_array()) return out;
+    for (auto& s : *subs) {
+        SubtitleOption so;
+        so.id = jstr(s, "id");
+        so.url = jstr(s, "url");
+        so.lang = jstr(s, "lang");
+        if (!so.url.empty()) out.push_back(std::move(so));  // a url is the only usable field
+    }
+    return out;
+}
+
 /// ---- Transport helper ------------------------------------------------------
 
 /// GET + parse JSON. Stremio addons are unauthenticated, so no headers. Returns

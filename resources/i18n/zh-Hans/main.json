@@ -242,6 +242,11 @@
       "low_quality": "低画质解码（以画质为代价换取更低的功耗）",
       "in_memory_cache": "内存缓存",
       "subs_fallback": "自动加载字幕",
+      "subtitle_lang": {
+        "header": "字幕语言",
+        "auto": "自动（应用语言）",
+        "off": "关闭"
+      },
       "vo": "视频输出",
       "hwdec": "硬件解码",
       "force_directplay": "强制直接播放",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "没有可用的字幕。请在您的 Stremio 账户中安装字幕插件（例如 OpenSubtitles）以在此获取字幕。"
+    },
     "movies": "电影",
     "series": "剧集",
     "popular": "热门",

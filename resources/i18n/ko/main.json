@@ -242,6 +242,11 @@
       "low_quality": "저화질 디코딩 (CPU 사용량 감소)",
       "in_memory_cache": "메모리 캐시",
       "subs_fallback": "자동으로 자막 불러오기",
+      "subtitle_lang": {
+        "header": "자막 언어",
+        "auto": "자동 (앱 언어)",
+        "off": "끄기"
+      },
       "vo": "비디오 출력",
       "hwdec": "하드웨어 디코딩",
       "force_directplay": "Direct Play 강제",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "사용할 수 있는 자막이 없습니다. Stremio 계정에 자막 애드온(예: OpenSubtitles)을 설치하면 여기에서 자막을 받을 수 있습니다."
+    },
     "movies": "영화",
     "series": "시리즈",
     "popular": "인기",

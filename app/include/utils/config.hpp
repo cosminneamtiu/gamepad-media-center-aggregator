@@ -117,6 +117,7 @@ public:
         PLAYER_HWDEC_CUSTOM,
         PLAYER_ASPECT,
         PLAYER_SUBS_FALLBACK,
+        PLAYER_SUBTITLE_LANG,  // preferred external-subtitle language: "auto" (= app locale), "off", or a 2-letter code
         PLAYER_TV_MODE,
         ALWAYS_ON_TOP,
         SINGLE,

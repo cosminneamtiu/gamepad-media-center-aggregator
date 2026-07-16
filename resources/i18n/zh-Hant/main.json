@@ -242,6 +242,11 @@
       "low_quality": "低畫質解碼（以降低 CPU 用量為代價）",
       "in_memory_cache": "記憶體快取",
       "subs_fallback": "自動載入字幕",
+      "subtitle_lang": {
+        "header": "字幕語言",
+        "auto": "自動（應用程式語言）",
+        "off": "關閉"
+      },
       "vo": "視訊輸出",
       "hwdec": "硬體解碼",
       "force_directplay": "強制直接播放",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "沒有可用的字幕。請在您的 Stremio 帳戶中安裝字幕外掛（例如 OpenSubtitles）以在此取得字幕。"
+    },
     "movies": "電影",
     "series": "影集",
     "popular": "熱門",

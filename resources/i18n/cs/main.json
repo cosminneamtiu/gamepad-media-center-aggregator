@@ -242,6 +242,11 @@
       "low_quality": "Nízká kvalita dekódování (s menším využitím CPU)",
       "in_memory_cache": "Vyrovnávací paměť v RAM",
       "subs_fallback": "Automaticky načítat titulky",
+      "subtitle_lang": {
+        "header": "Jazyk titulků",
+        "auto": "Automaticky (jazyk aplikace)",
+        "off": "Vypnuto"
+      },
       "vo": "Výstup videa",
       "hwdec": "Hardwarové dekódování",
       "force_directplay": "Vynutit přímé přehrávání",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "Nejsou dostupné žádné titulky. Nainstalujte si do účtu Stremio doplněk s titulky (např. OpenSubtitles), abyste je zde získali."
+    },
     "movies": "Filmy",
     "series": "Seriály",
     "popular": "Populární",

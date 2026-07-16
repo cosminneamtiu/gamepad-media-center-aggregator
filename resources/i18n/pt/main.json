@@ -242,6 +242,11 @@
       "low_quality": "Descodificação de baixa qualidade (com menos uso do CPU)",
       "in_memory_cache": "Cache em memória",
       "subs_fallback": "Carregar legendas automaticamente",
+      "subtitle_lang": {
+        "header": "Idioma das legendas",
+        "auto": "Automático (idioma do app)",
+        "off": "Desativado"
+      },
       "vo": "Saída de vídeo",
       "hwdec": "Descodificação por hardware",
       "force_directplay": "Forçar reprodução direta",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "Nenhuma legenda disponível. Instale um addon de legendas (ex.: OpenSubtitles) na sua conta Stremio para obtê-las aqui."
+    },
     "movies": "Filmes",
     "series": "Séries",
     "popular": "Populares",

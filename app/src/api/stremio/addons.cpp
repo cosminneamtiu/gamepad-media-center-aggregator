@@ -72,6 +72,19 @@ std::vector<Addon> AddonEngine::addonsFor(
     return out;
 }
 
+bool AddonEngine::hasResource(const std::string& resource) const {
+    // Called from the UI thread (subtitle menu). ensureLoaded() holds mtx across
+    // its network fetches, so a blocking lock here could freeze the UI for
+    // seconds. Try the lock instead and treat contention (worker still loading)
+    // like "not loaded yet" -> return true, so no misleading "install an addon"
+    // hint is shown while we can't actually inspect the collection.
+    std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
+    if (!lock.owns_lock() || !loaded) return true;
+    for (const auto& a : addons)
+        if (a.manifest.resources.count(resource)) return true;
+    return false;
+}
+
 std::vector<std::pair<Addon, Catalog>> AddonEngine::allCatalogs() {
     std::lock_guard<std::mutex> lock(mtx);
     std::vector<std::pair<Addon, Catalog>> out;

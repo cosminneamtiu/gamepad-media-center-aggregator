@@ -79,6 +79,9 @@ std::unordered_map<AppConfig::Item, AppConfig::Option> AppConfig::settingMap = {
     {MPV_VO, {"mpv_vo", {"gpu", "gpu-next", "mediacodec_embed"}}},
     {PLAYER_LOW_QUALITY, {"player_low_quality"}},
     {PLAYER_SUBS_FALLBACK, {"player_subs_fallback"}},
+    // options/labels are built at runtime from media::subtitleLangCatalog() in the
+    // settings tab (value stored as-is: "auto" | "off" | 2-letter code)
+    {PLAYER_SUBTITLE_LANG, {"player_subtitle_lang"}},
     {PLAYER_INMEMORY_CACHE,
         {
             "player_inmemory_cache",

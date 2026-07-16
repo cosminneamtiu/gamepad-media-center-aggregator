@@ -242,6 +242,11 @@
       "low_quality": "Giải mã chất lượng thấp (sử dụng ít CPU hơn)",
       "in_memory_cache": "Bộ nhớ đệm trong RAM",
       "subs_fallback": "Tự động tải phụ đề",
+      "subtitle_lang": {
+        "header": "Ngôn ngữ phụ đề",
+        "auto": "Tự động (ngôn ngữ ứng dụng)",
+        "off": "Tắt"
+      },
       "vo": "Đầu ra video",
       "hwdec": "Giải mã phần cứng",
       "force_directplay": "Buộc phát trực tiếp",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "Không có phụ đề. Cài đặt một addon phụ đề (ví dụ: OpenSubtitles) trong tài khoản Stremio của bạn để nhận phụ đề tại đây."
+    },
     "movies": "Phim",
     "series": "Phim bộ",
     "popular": "Phổ biến",

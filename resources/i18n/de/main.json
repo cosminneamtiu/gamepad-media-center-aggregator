@@ -242,6 +242,11 @@
       "low_quality": "Dekodierung in geringer Qualität (weniger CPU-Last)",
       "in_memory_cache": "Arbeitsspeicher-Cache",
       "subs_fallback": "Untertitel automatisch laden",
+      "subtitle_lang": {
+        "header": "Untertitelsprache",
+        "auto": "Automatisch (App-Sprache)",
+        "off": "Aus"
+      },
       "vo": "Videoausgabe",
       "hwdec": "Hardwaredekodierung",
       "force_directplay": "Direct Play erzwingen",
@@ -434,6 +439,9 @@
     }
   },
   "stremio": {
+    "subtitle": {
+      "none": "Keine Untertitel verfügbar. Installiere ein Untertitel-Addon (z. B. OpenSubtitles) in deinem Stremio-Konto, um welche zu erhalten."
+    },
     "movies": "Filme",
     "series": "Serien",
     "popular": "Beliebt",

@@ -8,15 +8,20 @@
     failure it calls `error`. ensureLoaded() is invoked INSIDE each async body
     (it may block on the manifest fetches).
 
-    Stubs (later étapes): resolvePlayback (étape 2), markWatched/Unwatched,
-    reportProgress, and the empty-Container verbs (collections/playlists/genres/
-    related/person/recently-added/extras/continue-watching) which Stremio addons
-    do not provide. None of these surface a hard error to the UI.
+    Playback: resolvePlayback returns the source url chosen at detail time;
+    getSubtitles fans out the addons' `subtitles` resource at play time (external
+    SRT/VTT sidecars, sub-add'ed by the player). Account actions (watchlist,
+    watched flag, progress) are gated on a connected account.
+
+    Empty-Container verbs (collections/playlists/genres/related/person/recently-
+    added/extras) return nothing — Stremio addons do not provide them. None of
+    these surface a hard error to the UI.
 */
 
 #include "api/stremio/backend.hpp"
 #include "api/stremio/types.hpp"
 #include "api/stremio/auth.hpp"
+#include "api/media/langs.hpp"
 #include "utils/config.hpp"
 #include <borealis/core/logger.hpp>
 #include <borealis/core/thread.hpp>
@@ -242,6 +247,43 @@ std::vector<media::Media> resolveAllStreams(
         return false;
     });
     return all;
+}
+
+/// Fan out /subtitles across the addons serving (type,id) and return the tracks
+/// as neutral subtitle Streams (streamType 3, key = absolute SRT/VTT url). The
+/// set is per-video (same for every source), so this is resolved once at play
+/// time, not per source. Deduped to ONE track per language (first wins, addons
+/// in collection order) to keep the player's subtitle menu readable — a single
+/// addon (OpenSubtitles) can return dozens of entries per language. `languageTag`
+/// carries the canonical 2-letter code for preferred-language matching.
+std::vector<media::Stream> resolveAllSubtitles(
+    AddonEngine& engine, const std::string& stremioType, const std::string& stremioId) {
+    std::vector<media::Stream> out;
+    std::set<std::string> seenLangs;
+    for (auto& a : engine.addonsFor("subtitles", stremioType, stremioId)) {
+        std::string url = engine.resourceUrl(a, "subtitles", stremioType, stremioId);
+        std::vector<SubtitleOption> subs;
+        try {
+            subs = parseSubtitles(getSync(url, 15000));
+        } catch (const std::exception& ex) {
+            brls::Logger::warning("stremio subtitles {}: {}", url, ex.what());
+            continue;
+        }
+        for (auto& s : subs) {
+            std::string code = media::subtitleLangCode(s.lang);
+            // dedup key: canonical code when known, else the raw lang verbatim
+            std::string key = code.empty() ? s.lang : code;
+            if (key.empty() || !seenLangs.insert(key).second) continue;
+            media::Stream st;
+            st.streamType = media::streamTypeSubtitle;
+            st.key = s.url;  // absolute url; subtitleSidecarUrl() passes it through
+            st.language = s.lang;
+            st.languageTag = code;  // 2-letter code (empty if unrecognized)
+            st.displayTitle = media::subtitleLangDisplay(s.lang);
+            out.push_back(std::move(st));
+        }
+    }
+    return out;
 }
 
 }  // namespace
@@ -906,7 +948,45 @@ media::PlaybackSource StremioBackend::resolvePlayback(
     return {version.parts.front().key, extra, false, "directplay"};
 }
 
-std::string StremioBackend::subtitleSidecarUrl(const std::string&) const { return ""; }
+std::string StremioBackend::subtitleSidecarUrl(const std::string& streamKey) const {
+    // Stremio subtitle urls are absolute http(s) links (like posters) — passed to
+    // mpv sub-add verbatim, no proxy/token (addons are unauthenticated).
+    return streamKey;
+}
+
+void StremioBackend::getSubtitles(
+    const media::Item& item, media::Then<std::vector<media::Stream>> then, media::OnError error) {
+    ParsedId pid = parseId(item.ratingKey);
+    // Subtitles are addressable only on a playable video (a whole movie, or an
+    // episode — its id carries the season:episode suffix). Shows/seasons play via
+    // their episodes, so they never reach here with a subtitle request.
+    bool isEpisode = (pid.stremioType == "series" && pid.episode >= 0);
+    if (pid.stremioType != "movie" && !isEpisode) {
+        if (then) then({});
+        return;
+    }
+    std::string type = (pid.stremioType == "movie") ? "movie" : "series";
+    std::string id = pid.stremioId;  // movie tt-id, or episode "tt…:S:E"
+    brls::async([this, type, id, then, error]() {
+        try {
+            engine.ensureLoaded();
+            std::vector<media::Stream> subs = resolveAllSubtitles(engine, type, id);
+            brls::sync(std::bind(then, std::move(subs)));
+        } catch (const std::exception& ex) {
+            brls::Logger::warning("stremio getSubtitles: {}", ex.what());
+            if (error) brls::sync(std::bind(error, std::string(ex.what())));
+        }
+    });
+}
+
+std::string StremioBackend::subtitleMenuHint() const {
+    // When the account's addon collection carries no `subtitles` provider, no
+    // external subtitles can ever be fetched — guide the user to install one
+    // (mirrors the streams "none" hint). hasResource reads the already-loaded
+    // manifest set (loaded during playback); it never blocks here.
+    if (engine.hasResource("subtitles")) return "";
+    return "main/stremio/subtitle/none"_i18n;
+}
 
 void StremioBackend::reportProgress(
     const std::string& id, media::PlayState state, int64_t posMs, int64_t durMs, const std::string&) {

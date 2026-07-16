@@ -4,6 +4,7 @@
 #include "view/button_close.hpp"
 #include "view/mpv_core.hpp"
 #include "view/player_setting.hpp"
+#include "api/backend.hpp"  // full media::Backend definition (subtitleMenuHint)
 
 using namespace brls::literals;
 
@@ -343,6 +344,16 @@ void PlayerSetting::showSubtitleMenu(const plex::Media* src) {
                 selectedSubtitle = id;
                 MPVCore::instance().getCustomEvent()->fire(QUALITY_CHANGE, nullptr);
             });
+        }
+    }
+
+    // No subtitle track at all: let the backend guide the user (Stremio with no
+    // `subtitles` addon in the collection). Informational entry, no-op on select.
+    if (names.size() == 1) {
+        std::string hint = AppConfig::instance().backend().subtitleMenuHint();
+        if (!hint.empty()) {
+            names.push_back(hint);
+            actions.push_back([]() {});
         }
     }
 

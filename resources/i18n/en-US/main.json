@@ -254,6 +254,11 @@
       "low_quality": "Low quality decoding (with less CPU usage)",
       "in_memory_cache": "Inmemory cache",
       "subs_fallback": "Autoload subtitles",
+      "subtitle_lang": {
+        "header": "Subtitle language",
+        "auto": "Automatic (app language)",
+        "off": "Off"
+      },
       "vo": "Video output",
       "hwdec": "Hardware decode",
       "force_directplay": "Force direct play",
@@ -433,6 +438,9 @@
     "error": "Unable to load"
   },
   "stremio": {
+    "subtitle": {
+      "none": "No subtitles available. Install a subtitles addon (e.g. OpenSubtitles) in your Stremio account to get some here."
+    },
     "movies": "Movies",
     "series": "Series",
     "popular": "Popular",

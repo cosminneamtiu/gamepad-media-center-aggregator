@@ -9,6 +9,59 @@ prepared with [git-cliff](https://git-cliff.org/) from conventional commits
 hand. For the history of the upstream project this fork is based on, see the
 [Switchfin changelog](https://github.com/dragonflylee/switchfin/blob/dev/CHANGELOG.md).
 
+## [1.1.0] - 2026-07-17
+
+### Added
+
+- **Stremio: external subtitles from a `subtitles` addon (#51).** When your
+  Stremio account has a subtitles addon installed (e.g. OpenSubtitles), its
+  tracks now show up in the player's subtitle menu, resolved on demand at
+  playback time. Resolution runs off the UI thread so it never delays the start
+  of a stream, and the hook is a no-op for Plex and Jellyfin, which already
+  expose their own subtitle tracks. A hint is shown when no subtitles addon is
+  configured, so the empty menu is not mistaken for a bug.
+
+### Fixed
+
+- **PS Vita: the remaining GPU crashes ("blue light of death"), offline and in
+  the music/overview screens.** Following 1.0.5's Stremio artwork fix, three
+  further GPU-memory exhaustion paths on the Vita's tiny CDRAM were closed:
+  - *Texture memory is now bounded overall.* A hard byte cap on the image cache
+    stops the overview and music grids from stacking enough textures to fault
+    the allocator mid-render.
+  - *Offline/cached artwork was still uploaded at full resolution.* It is now
+    downscaled to the display size on GXM like online artwork, fixing the crash
+    that only reproduced offline (#60).
+  - *The mpv video FBO no longer requests MSAA*, freeing ~6 MB of CDRAM during
+    playback (#61).
+  - The mpv GXM FBO init is now guarded, and Stremio sources the Vita decoder
+    cannot handle are skipped instead of crashing.
+- **Stremio: debrid/Torrentio config changes did not take effect (#46).** The
+  account's addon collection is now re-synced at startup, so reconfiguring
+  Torrentio (e.g. wiring up AllDebrid or changing filters) is picked up on the
+  next launch instead of keeping the stale addon set.
+- **Music: the artist page crashed on Switch + Jellyfin when navigating up from
+  the header with the D-pad (#44).**
+- **Music: the album screen showed an inaccurate loading skeleton** that did not
+  match the real content layout.
+- **Connection: remote (WAN) reconnects were slow or failed (#36).** Server
+  candidates are now raced in parallel instead of tried one at a time, so the
+  first reachable address wins.
+- **Connection: the connection tiles now respond to a tap** (touch/mouse), not
+  only to the gamepad.
+- **Desktop: crash and misplaced widgets where no battery or wi-fi info is
+  available (#37).** The battery widget is hidden on PC desktop, and both the
+  battery and wireless widgets now guard their `draw()` against missing platform
+  info (fixes a Linux desktop crash).
+- **Offline downloads now run on a thread pool**, keeping the UI responsive and
+  cleaning up their HTTP sessions correctly.
+- **Focus: a freshly built list now defaults focus to the lowest-index cell**
+  rather than whichever cell was inserted first.
+
+### Build
+
+- Bumped mbedTLS `3.6.5-1` → `3.6.7-1` for the Vita and Switch builds.
+
 ## [1.0.5] - 2026-07-13
 
 ### Fixed

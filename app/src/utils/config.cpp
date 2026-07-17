@@ -451,6 +451,15 @@ bool AppConfig::init() {
         // 初始化纹理缓存数量
 #if defined(__PSV__) || defined(__PS4__)
         brls::TextureCache::instance().cache.setCapacity(1);
+#ifdef __PSV__
+        // The entry-count cap alone (401 effective: setCapacity ADDS
+        // DEFAULT_CAPACITY) lets artwork pin ~100+ MB and starve mpv of
+        // LPDDR/CDRAM. Cap the BYTES too: 48 MB of DXT posters is ~200-400
+        // covers, plenty for browsing, and leaves the video allocations room.
+        // (48, not 64: the music-view crash log peaked near ~54 MB of artwork
+        // before the blue light — the budget must sit safely below that.)
+        brls::TextureCache::instance().cache.setByteCapacity(48 * 1024 * 1024);
+#endif
 #else
         brls::TextureCache::instance().cache.setCapacity(getItem(TEXTURE_CACHE_NUM, 200));
 #endif

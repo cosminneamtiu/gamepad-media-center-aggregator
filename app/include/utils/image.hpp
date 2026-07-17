@@ -25,7 +25,19 @@ public:
         // and gives downloaded content instant local artwork even online
         // (SPEC §4.2, AC6/AC17). Keyed by the raw path/url passed here.
         if (ImageCache::has(path)) {
-            view->setImageFromFile(ImageCache::localPath(path));
+            std::string local = ImageCache::localPath(path);
+#ifdef BOREALIS_USE_GXM
+            // GXM: run the cached asset through the same decode+downscale+DXT as
+            // the network path (withLocal -> doRequest). setImageFromFile would
+            // upload it at NATIVE resolution, uncompressed — a downloaded
+            // 2000x3000 poster becomes a ~23 MB RGBA texture (vs ~256 KB DXT1
+            // here), reintroducing the GPU-memory exhaustion the network
+            // downscale fixed, on the offline/downloaded path. width/height cap
+            // the texture to the display size.
+            withLocal(view, local, width, height);
+#else
+            view->setImageFromFile(local);
+#endif
             return;
         }
         // backend-specific URL building (Plex /photo/:/transcode, Jellyfin /Images...);
@@ -44,6 +56,14 @@ public:
     /// decoded texture to the smallest power-of-two that still covers it.
     static void with(brls::Image* view, const std::string& url, int width = 0, int height = 0);
 
+#ifdef BOREALIS_USE_GXM
+    /// GXM offline path: like with(), but reads the pixels from a locally cached
+    /// file instead of the network, then runs the same decode+downscale+DXT as
+    /// doRequest. Keeps a cached native-resolution asset from becoming an
+    /// oversized uncompressed GPU texture (see Image::load). Main thread.
+    static void withLocal(brls::Image* view, const std::string& localPath, int width = 0, int height = 0);
+#endif
+
     /// @brief 取消请求，并清空图片。此函数需要工作在主线程。
     static void cancel(brls::Image* view);
 
@@ -60,6 +80,9 @@ private:
     HTTP::Cancel isCancel;
     int targetW = 0;  // intended display size (GXM texture cap); 0 = unknown
     int targetH = 0;
+    // true (GXM offline): `url` is a local cache file read from disk instead of
+    // fetched over HTTP; the decode/downscale/upload path is otherwise shared.
+    bool local = false;
 
     inline static std::mutex requestMutex;
     inline static std::unordered_map<brls::Image*, Ref> requests;

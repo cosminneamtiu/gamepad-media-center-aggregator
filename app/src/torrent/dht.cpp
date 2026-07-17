@@ -43,6 +43,8 @@
 // definitions below therefore acquire C linkage from those prior declarations.
 #include "dht.h"
 
+#include "torrent/util.hpp"  // osRandom (console-safe OS entropy; no /dev/urandom)
+
 // RNG backends, picked at compile time the same way sha1.cpp / crypto.cpp dispatch.
 #if defined(TORRENT_SHA1_OPENSSL)
 #include <openssl/rand.h>
@@ -92,22 +94,20 @@ bool fillCryptoRandom(void* buf, size_t size) {
 #elif defined(TORRENT_SHA1_MBEDTLS)
     // Console: a proper CTR_DRBG. mbedtls' own entropy module may have no hardware
     // source registered on these toolchains, so we seed the DRBG from a best-effort
-    // mix (OS RNG via random_device + a high-resolution clock + a per-call counter +
+    // mix (OS CSPRNG via osRandom + a high-resolution clock + a per-call counter +
     // a stack address) rather than trusting a single source. CTR_DRBG then expands
     // that seed into strong output.
     struct Seed {
         static int gather(void*, unsigned char* out, size_t len) {
+            // Base entropy from the OS CSPRNG (console-safe: never /dev/urandom, so
+            // no NULL-FILE* fault on Switch/Vita), XORed with a high-res clock, a
+            // per-call counter and a stack address as defense in depth.
+            osRandom(out, len);
             static std::atomic<uint64_t> ctr{0x9E3779B97F4A7C15ULL};
-            std::random_device rd;
-            for (size_t i = 0; i < len;) {
-                uint64_t mix = ((uint64_t)rd() << 32) ^ (uint64_t)rd();
-                mix ^= (uint64_t)std::chrono::steady_clock::now().time_since_epoch().count();
-                mix ^= ctr.fetch_add(0x9E3779B97F4A7C15ULL);
-                mix ^= (uint64_t)(uintptr_t)&out;
-                size_t n = len - i < sizeof(mix) ? len - i : sizeof(mix);
-                std::memcpy(out + i, &mix, n);
-                i += n;
-            }
+            uint64_t mix = (uint64_t)std::chrono::steady_clock::now().time_since_epoch().count();
+            mix ^= ctr.fetch_add(0x9E3779B97F4A7C15ULL);
+            mix ^= (uint64_t)(uintptr_t)&out;
+            for (size_t i = 0; i < len && i < sizeof(mix); i++) out[i] ^= ((unsigned char*)&mix)[i];
             return 0;
         }
     };
@@ -132,14 +132,8 @@ bool fillCryptoRandom(void* buf, size_t size) {
         ::close(fd);
         if (got == size) return true;
     }
-    // Fallback: expand random_device draws (last resort; still session-unique).
-    std::random_device rd;
-    for (size_t i = 0; i < size;) {
-        uint32_t r = rd();
-        size_t n = size - i < sizeof(r) ? size - i : sizeof(r);
-        std::memcpy(reinterpret_cast<char*>(buf) + i, &r, n);
-        i += n;
-    }
+    // Fallback: OS entropy via osRandom (console-safe; /dev/urandom on desktop).
+    osRandom(buf, size);
     return true;
 #endif
 }

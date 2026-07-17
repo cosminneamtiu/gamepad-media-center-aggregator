@@ -385,29 +385,32 @@ elseif (PLATFORM_PS4)
     )
 endif ()
 
-# Optional: build the torrent engine + PoC as a separate target tree. Only the
-# desktop PoC is wired for now; the console shims are documented seams (see
-# app/include/torrent/socket.hpp) and are enabled per-port later.
+# Optional: build the torrent engine + PoC as a separate target tree, and wire the
+# engine into the app on every platform (the socket shim covers desktop, Switch,
+# Vita and PS4 — see app/include/torrent/socket.hpp). Off by default.
 if (ENABLE_TORRENT)
     message(STATUS "ENABLE_TORRENT=ON — building torrent engine + PoC (separate target)")
     add_subdirectory(torrent)
 
     # App integration: link the engine into the app and turn on the gated playback
     # path (resolvePlayback -> local HTTP URL, source UI, live buffering overlay,
-    # teardown). Enabled on DESKTOP and SWITCH: the Switch socket shim (libnx bsd)
-    # is wired and verified (socket.cpp #if __SWITCH__), and torrent/CMakeLists
-    # already resolves curl/mbedtls from the switch-* portlibs via pkg-config +
-    # links mbedcrypto for the SHA-1 backend. Vita/PS4 keep their socket seams
-    # compile-verified only, so they are NOT integrated into the GUI yet. With the
-    # option OFF everywhere (the default) the app is byte-for-byte unchanged:
-    # ENABLE_TORRENT is defined for the app ONLY here, and every integration site
-    # is behind `#if defined(ENABLE_TORRENT)`. The bridge glue (session.cpp) lives
-    # under app/src/torrent/ — already carved out of the app GLOB — and is added to
-    # the app target explicitly so it never enters a non-integrated build.
-    if (PLATFORM_DESKTOP OR PLATFORM_SWITCH)
-        message(STATUS "ENABLE_TORRENT — integrating torrent playback into the app (desktop/switch)")
-        target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/app/src/torrent/session.cpp)
-        target_link_libraries(${PROJECT_NAME} PRIVATE torrent_engine)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_TORRENT)
-    endif ()
+    # teardown). Integrated on ALL FOUR platforms — the socket shim covers every
+    # target and torrent/CMakeLists resolves curl/mbedtls from each toolchain:
+    #   - Desktop : POSIX/winsock sockets, find_package(CURL) + system SHA-1.
+    #   - Switch  : libnx `bsd` sockets (socket.cpp #if __SWITCH__), switch-curl +
+    #               mbedcrypto (SHA-1) via pkg-config.                    [verified]
+    #   - Vita    : SceNet rewrite (socket.cpp #elif __vita__), vita curl +
+    #               mbedcrypto via pkg-config; DHT is opt-in here (types.hpp).
+    #   - PS4     : openorbis FreeBSD BSD sockets (socket.cpp POSIX #else),
+    #               find_package(CURL) + mbedcrypto (SHA-1).
+    # The integration is unconditional inside this if(ENABLE_TORRENT) block: every
+    # integration site is behind `#if defined(ENABLE_TORRENT)`, so with the option
+    # OFF everywhere (the default) the app is byte-for-byte unchanged — ENABLE_TORRENT
+    # is defined for the app ONLY here. The bridge glue (session.cpp) lives under
+    # app/src/torrent/ — already carved out of the app GLOB — and is added to the app
+    # target explicitly so it never enters a non-integrated build.
+    message(STATUS "ENABLE_TORRENT — integrating torrent playback into the app")
+    target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/app/src/torrent/session.cpp)
+    target_link_libraries(${PROJECT_NAME} PRIVATE torrent_engine)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_TORRENT)
 endif ()

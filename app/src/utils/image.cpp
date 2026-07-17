@@ -1,5 +1,6 @@
 #include "utils/image.hpp"
 #include "utils/thread.hpp"
+#include <fstream>
 #include <fmt/format.h>
 #include <borealis/core/cache_helper.hpp>
 #ifdef USE_WEBP
@@ -171,6 +172,39 @@ void Image::with(brls::Image* view, const std::string& url, int width, int heigh
     ThreadPool::instance().submit([item](HTTP& s) { item->doRequest(s); });
 }
 
+#ifdef BOREALIS_USE_GXM
+void Image::withLocal(brls::Image* view, const std::string& localPath, int width, int height) {
+    // Mirrors with(): the cache is keyed by the local path (as setImageFromFile
+    // did), so repeat loads of a cached asset hit the TextureCache directly.
+    int tex = brls::TextureCache::instance().getCache(localPath);
+    if (tex > 0) {
+        view->setFreeTexture(false);
+        view->innerSetImage(tex);
+        return;
+    }
+
+    Ref item = std::make_shared<Image>();
+
+    std::lock_guard<std::mutex> lock(requestMutex);
+
+    auto it = requests.insert(std::make_pair(view, item));
+    if (!it.second) {
+        brls::Logger::warning("insert Image {} failed", fmt::ptr(view));
+        return;
+    }
+
+    item->image = view;
+    item->url = localPath;  // doubles as the disk path (this->local == true)
+    item->local = true;
+    item->targetW = width;
+    item->targetH = height;
+    view->ptrLock();
+    view->setFreeTexture(false);
+
+    ThreadPool::instance().submit([item](HTTP& s) { item->doRequest(s); });
+}
+#endif
+
 void Image::cancel(brls::Image* view) {
     brls::TextureCache::instance().removeCache(view->getTexture());
     view->clear();
@@ -189,16 +223,33 @@ void Image::doRequest(HTTP& s) {
         return;
     }
     try {
-        std::ostringstream body;
-        HTTP::set_option(s, this->isCancel, HTTP::Timeout{});
-        s._get(this->url, &body);
-        std::string data = body.str();
+        std::string data;
+        if (this->local) {
+            // offline: read the cached asset straight off disk — no server, no
+            // curl handle touched (getinfo below would deref a NULL type on it).
+            std::ifstream f(this->url, std::ios::binary);
+            std::ostringstream body;
+            body << f.rdbuf();
+            data = body.str();
+            if (data.empty()) throw std::runtime_error("empty or unreadable cache file");
+        } else {
+            std::ostringstream body;
+            HTTP::set_option(s, this->isCancel, HTTP::Timeout{});
+            s._get(this->url, &body);
+            data = body.str();
+        }
         uint8_t* imageData = nullptr;
         int imageW = 0, imageH = 0;
         bool isWebp = false;
 #ifdef USE_WEBP
+        // Prefer the RIFF....WEBP magic: the only reliable signal for a cached
+        // file (its name is a hash) and for any response with no Content-Type.
+        // The "Webp" URL hint / Content-Type only exist on the network path.
         char* ct = nullptr;
-        if (url.find("Webp") != std::string::npos || (s.getinfo(&ct) && strcmp(ct, "image/webp") == 0)) {
+        bool webpMagic = data.size() >= 12 && memcmp(data.data(), "RIFF", 4) == 0 &&
+                         memcmp(data.data() + 8, "WEBP", 4) == 0;
+        if (webpMagic || url.find("Webp") != std::string::npos ||
+            (!this->local && s.getinfo(&ct) && ct != nullptr && strcmp(ct, "image/webp") == 0)) {
             imageData = WebPDecodeRGBA((const uint8_t*)data.c_str(), data.size(), &imageW, &imageH);
             isWebp = true;
         } else

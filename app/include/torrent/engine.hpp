@@ -29,6 +29,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "torrent/dht.hpp"
 #include "torrent/http_server.hpp"
 #include "torrent/metadata.hpp"
 #include "torrent/peer.hpp"
@@ -99,6 +100,7 @@ private:
     void webSeedLoop();
 
     void initUtp();  // bring up the µTP manager (no-op when enableUtp is off)
+    void initDht();  // bring up the DHT manager + start the search (no-op when off)
     std::unique_ptr<PeerTransport> makeTransport(const PeerAddr&, TransportKind);
     std::string attemptKey(const PeerAddr&, TransportKind, Encryption) const;
     /// Queue the next fallback rung for a peer that died before its BitTorrent
@@ -145,6 +147,11 @@ private:
     // Declared before peers_ so it outlives them (peers hold µTP transports that
     // utp_close into this context); teardown order is also enforced in close().
     std::unique_ptr<UtpManager> utpMgr_;
+
+    // BEP-5 mainline DHT: one jech/dht instance + one dedicated UDP socket, feeding
+    // discovered peers into enqueuePeers (like trackers/PEX). Null when DHT is
+    // disabled/unavailable. Torn down explicitly (and single-threaded) in close().
+    std::unique_ptr<DhtManager> dhtMgr_;
 
     // peers
     std::vector<std::unique_ptr<PeerConnection>> peers_;

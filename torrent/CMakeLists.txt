@@ -16,11 +16,16 @@
 cmake_minimum_required(VERSION 3.18)
 
 # Only declare a standalone project when configured on our own (not as a subdir).
+# C is enabled alongside CXX because jech/dht (BEP-5 DHT) is a C translation unit;
+# when this file is add_subdirectory'd by the root, the app already enables C.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(gmca_torrent CXX)
+    project(gmca_torrent C CXX)
     if (NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
     endif ()
+else ()
+    # Subdir build: make sure C is available for the DHT even if the parent is CXX-only.
+    enable_language(C)
 endif ()
 
 set(TORRENT_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
@@ -38,6 +43,7 @@ set(TORRENT_ENGINE_SOURCES
     ${TORRENT_SRC}/socket.cpp
     ${TORRENT_SRC}/transport.cpp
     ${TORRENT_SRC}/utp.cpp
+    ${TORRENT_SRC}/dht.cpp
     ${TORRENT_SRC}/metadata.cpp
     ${TORRENT_SRC}/http_client.cpp
     ${TORRENT_SRC}/storage.cpp
@@ -82,6 +88,21 @@ if (PLATFORM_PSV)
     target_compile_options(utp PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/libutp_vita_compat.h)
 endif ()
 
+# --- jech/dht (mainline BitTorrent DHT / BEP-5), vendored under app/vendor/jech-dht -
+# The reference Kademlia DHT (the same one Transmission uses), C, MIT, zero external
+# dependencies. Built as its OWN static lib so its vendored-C warnings stay isolated
+# from the engine's warning policy. It performs NO socket syscalls itself: every
+# datagram goes out through the user-provided dht_sendto callback and reception is fed
+# in by the caller (dht_periodic), so BOTH I/O directions ride our net::UdpSocket shim
+# (glue in app/src/torrent/dht.cpp) and dht.c builds/runs unmodified on every target —
+# no per-platform shim is needed (it uses only sockaddr TYPES + htons/inet_ntop, all
+# present on desktop, libnx, openorbis and vitasdk newlib). The vendored source is
+# unmodified (see app/vendor/jech-dht/VENDOR.txt for the upstream commit).
+set(JECHDHT_DIR ${TORRENT_VENDOR}/jech-dht)
+add_library(jechdht STATIC ${JECHDHT_DIR}/dht.c)
+target_include_directories(jechdht PUBLIC ${JECHDHT_DIR})
+target_compile_options(jechdht PRIVATE -w)  # silence the vendored C source's warnings
+
 # HTTP (trackers/web seeds) uses libcurl.
 find_package(Threads REQUIRED)
 
@@ -123,6 +144,9 @@ target_link_libraries(torrent_engine PUBLIC Threads::Threads)
 # µTP transport: app/src/torrent/utp.cpp includes libutp's utp.h and links libutp.
 # PRIVATE — libutp is an implementation detail hidden behind PeerTransport.
 target_link_libraries(torrent_engine PRIVATE utp)
+# DHT: app/src/torrent/dht.cpp includes jech/dht's dht.h and links it. PRIVATE —
+# jech/dht is an implementation detail hidden behind DhtManager.
+target_link_libraries(torrent_engine PRIVATE jechdht)
 # Switch/Vita curl comes from pkg-config (CURL_* vars); PS4 (openorbis) and desktop
 # come from find_package(CURL), which exports the CURL::libcurl imported target.
 if (PLATFORM_SWITCH OR PLATFORM_PSV)

@@ -48,6 +48,7 @@ std::string TorrentEngine::open(const std::string& magnetOrInfoHash, int fileIdx
     meta0ReqMs_ = 0;
     running_ = true;
     initUtp();  // stand up the µTP carrier before the loop that dials peers
+    initDht();  // stand up the DHT + start the search before the loop pumps it
     engineThread_ = std::thread([this] { engineLoop(); });
     announcerThread_ = std::thread([this] { announcerLoop(); });
 
@@ -77,6 +78,7 @@ std::string TorrentEngine::openTorrentFile(const std::string& rawTorrent, int fi
     }
     running_ = true;
     initUtp();  // stand up the µTP carrier before the loop that dials peers
+    initDht();  // stand up the DHT + start the search before the loop pumps it
     // Metadata is already known -> stand up the data stage before the loop runs.
     startDataStage(wantFileIdx_);
     engineThread_ = std::thread([this] { engineLoop(); });
@@ -173,6 +175,22 @@ void TorrentEngine::initUtp() {
     if (!utpMgr_->start()) {
         utpMgr_.reset();  // UDP/libutp unavailable -> engine stays TCP-only
     }
+}
+
+void TorrentEngine::initDht() {
+    if (!cfg_.enableDht) return;
+    dhtMgr_ = std::make_unique<DhtManager>();
+    // Discovered peers flow into the same queue as trackers/PEX. enqueuePeers is
+    // mutex-protected and gated by knownPeers_, so DHT duplicates are deduped for
+    // free and the connect ladder treats a DHT peer exactly like any other.
+    bool ok = dhtMgr_->start([this](const std::vector<PeerAddr>& peers) { enqueuePeers(peers); });
+    if (!ok) {
+        dhtMgr_.reset();  // UDP/jech-dht unavailable -> engine keeps trackers/PEX/µTP
+        return;
+    }
+    // Kick the search now (caller thread, strictly before the loop spawns — same
+    // happens-before discipline as dht_init). The loop then pumps it via periodic().
+    dhtMgr_->search(infoHash_);
 }
 
 std::unique_ptr<PeerTransport> TorrentEngine::makeTransport(const PeerAddr& addr, TransportKind kind) {
@@ -416,6 +434,17 @@ void TorrentEngine::engineLoop() {
             it.wantRead = true;
             items.push_back(it);
         }
+        // DHT rides its own dedicated UDP socket (separate from µTP so KRPC and µTP
+        // are never multiplexed). Add it to the poll set the same way.
+        bool dhtActive = dhtMgr_ && dhtMgr_->active();
+        int dhtIdx = -1;
+        if (dhtActive) {
+            dhtIdx = (int)items.size();
+            net::PollItem it;
+            it.fd = dhtMgr_->udpHandle();
+            it.wantRead = true;
+            items.push_back(it);
+        }
 
         net::poll(items, 200);
         for (size_t i = 0; i < ptrs.size(); i++) {
@@ -444,6 +473,15 @@ void TorrentEngine::engineLoop() {
             utpMgr_->checkTimeouts(nowMs());
         }
 
+        // DHT: drain the dedicated UDP socket into jech/dht (which fires our search
+        // callback -> enqueuePeers), then pump its timers on the cadence it asks for
+        // (and flush any bootstrap pings resolved on the announcer thread). Both are
+        // cheap no-ops when idle. All dht_* calls stay on this one thread.
+        if (dhtActive) {
+            if (dhtIdx >= 0 && items[dhtIdx].readable) dhtMgr_->serviceReadable();
+            dhtMgr_->periodic(nowMs());
+        }
+
         int64_t now = nowMs();
         for (auto& p : peers_) p->onTick(now);
 
@@ -467,6 +505,12 @@ void TorrentEngine::engineLoop() {
 void TorrentEngine::announcerLoop() {
     bool firstRound = true;
     while (running_) {
+        // DHT bootstrap DNS runs here (off the engine loop) so a slow resolve never
+        // stalls peer servicing; resolveBootstrap self-guards to run once (retrying
+        // only if every node failed to resolve). The resolved endpoints are pinged on
+        // the engine thread in DhtManager::periodic().
+        if (dhtMgr_ && dhtMgr_->active()) dhtMgr_->resolveBootstrap();
+
         std::vector<std::string> trackers;
         {
             std::lock_guard<std::mutex> lk(trackerMutex_);
@@ -594,6 +638,9 @@ void TorrentEngine::updateStats() {
         std::lock_guard<std::mutex> lk(trackerMutex_);
         s.webSeeds = (int)webSeeds_.size();
     }
+    // nodeCount() is a dht_* call; safe here because updateStats runs on the engine
+    // loop thread, the only thread that touches jech/dht.
+    if (dhtMgr_ && dhtMgr_->active()) s.dhtNodes = dhtMgr_->nodeCount();
     int64_t dt = now - lastRateSampleMs_;
     if (dt >= 1000) {
         s.downloadRateBps = (double)(s.downloadedBytes - lastRateBytes_) * 1000.0 / (double)dt;
@@ -653,6 +700,14 @@ void TorrentEngine::close() {
     if (utpMgr_) {
         utpMgr_->stop();  // utp_destroy + close the shared UDP socket
         utpMgr_.reset();
+    }
+    // DHT teardown: the engine thread has joined, so dht_uninit runs single-threaded
+    // with no query/periodic in flight — the discipline that avoids the historical
+    // "DHT crashes on exit". dht_uninit only frees tables (no sends), then the socket
+    // is closed.
+    if (dhtMgr_) {
+        dhtMgr_->stop();
+        dhtMgr_.reset();
     }
     {
         std::lock_guard<std::mutex> lk(pickerMutex_);

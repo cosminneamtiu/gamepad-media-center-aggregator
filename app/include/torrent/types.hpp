@@ -50,6 +50,19 @@ struct EngineConfig {
     bool enableWebSeed = true;                   // BEP-19 url-list fallback (cold-swarm robustness)
     bool enableTrackers = true;                  // BEP-3/12/15 announces
     bool enablePex = true;                       // BEP-11 peer exchange
+    // BEP-5 mainline DHT (Kademlia) — trackerless peer discovery. The single most
+    // valuable peer source for magnets whose trackers are dead/censored. It rides a
+    // dedicated UDP socket and jech/dht (see dht.hpp). Default ON everywhere EXCEPT
+    // Vita: the port is fully portable (all I/O goes through the socket shim), but the
+    // routing table + query traffic cost RAM/CPU the Vita cannot spare (H.264-only,
+    // tight memory), and trackers + PEX + µTP already cover discovery there — so DHT
+    // is opt-in on Vita, on by default (with impeccable, single-threaded teardown)
+    // elsewhere.
+#if defined(__vita__)
+    bool enableDht = false;
+#else
+    bool enableDht = true;
+#endif
     // Transport carriers (transport.hpp). A fresh peer is dialed on TCP first (when
     // enabled); a peer that dies before its BitTorrent handshake is retried on the
     // other carrier — widening the reachable pool to peers only joinable over µTP
@@ -78,6 +91,7 @@ struct Stats {
     bool metadataReady = false;
     int64_t contiguousReadyBytes = 0;  // contiguous bytes ready from the file head
     int webSeeds = 0;
+    int dhtNodes = 0;  // good + dubious nodes in the DHT routing table (0 if DHT off)
 };
 
 }  // namespace torrent

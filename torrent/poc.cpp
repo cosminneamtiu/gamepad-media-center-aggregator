@@ -15,6 +15,8 @@
       --run-seconds <n>    serve for N seconds then exit (default 0 = until Ctrl-C)
       --max-peers <n>      cap peer connections (default 40)
       --no-webseed         disable the BEP-19 fallback
+      --dht                enable the BEP-5 mainline DHT (default: on)
+      --no-dht             disable the BEP-5 mainline DHT (trackerless discovery)
       --encryption <mode>  MSE/PE policy: plain | prefer | force (default prefer)
       --transport <mode>   carrier: tcp | utp | both (default both = TCP + µTP
                            fallback). utp = µTP only (BEP-29); tcp = legacy TCP only
@@ -122,6 +124,10 @@ int main(int argc, char** argv) {
             cfg.maxPeers = std::stoi(next("--max-peers"));
         } else if (a == "--no-webseed") {
             cfg.enableWebSeed = false;
+        } else if (a == "--dht") {
+            cfg.enableDht = true;
+        } else if (a == "--no-dht") {
+            cfg.enableDht = false;
         } else if (a == "--encryption") {
             std::string m = next("--encryption");
             if (m == "plain") {
@@ -187,9 +193,9 @@ int main(int argc, char** argv) {
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     while (!g_stop) {
         Stats s = engine.stats();
-        fprintf(stderr, "peers %d/%d | pieces %d/%d | dl %s | rate %.0f KiB/s | head %s | webseeds %d\n",
+        fprintf(stderr, "peers %d/%d | pieces %d/%d | dl %s | rate %.0f KiB/s | head %s | webseeds %d | dht %d\n",
             s.peersConnected, s.peersKnown, s.piecesHave, s.piecesTotal, humanBytes(s.downloadedBytes).c_str(),
-            s.downloadRateBps / 1024.0, humanBytes(s.contiguousReadyBytes).c_str(), s.webSeeds);
+            s.downloadRateBps / 1024.0, humanBytes(s.contiguousReadyBytes).c_str(), s.webSeeds, s.dhtNodes);
         std::this_thread::sleep_for(std::chrono::seconds(1));
         if (runSeconds > 0) {
             int64_t now =

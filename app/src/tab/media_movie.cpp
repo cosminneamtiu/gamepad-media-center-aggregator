@@ -447,6 +447,13 @@ void MediaMovie::buildSources(const media::Item& item) {
                                      : sourcePill("main/stremio/source/uncached"_i18n, pillBg, greyCol));
         else
             cells.push_back(sourcePill("main/stremio/source/direct"_i18n, pillBg, textCol));
+        // seeders (addon-provided; only known/meaningful on a torrent row). -1 =
+        // unknown -> omit the pill (never a misleading "👥 0"). Neutral grey pill so
+        // it groups with the quality chip without competing with the gold badge.
+#if defined(ENABLE_TORRENT)
+        if (torrentRow && m.seeders >= 0)
+            cells.push_back(sourcePill(fmt::format("\xF0\x9F\x91\xA5 {}", m.seeders), pillBg, textCol));
+#endif
         // source name (grows) + meta (codec · size)
         cells.push_back(sourceLabel(m.label, 15, textCol, true));
         if (!m.detail.empty()) cells.push_back(sourceLabel(m.detail, 13, greyCol));

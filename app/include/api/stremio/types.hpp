@@ -656,6 +656,56 @@ inline std::string parseAudioLabel(const std::string& text) {
     return "";
 }
 
+/// Seeder/peer count from a stream's name+title. Addons advertise it in wildly
+/// different shapes: Torrentio & co. prefix the number with 👤 (U+1F464) or 👥
+/// (U+1F465) — "👤 45" — while others spell it out ("Seeders: 45" / "45 seeders").
+/// Returns the count, or -1 when none is present (unknown — never rendered as a
+/// misleading "0"). Purely additive: it only reads the addon text, never the engine.
+inline int parseSeeders(const std::string& text) {
+    // 1) emoji-prefixed: 👤 / 👥 (each exactly 4 UTF-8 bytes), then optional
+    //    spaces/colon, then the number.
+    static const char* emojis[] = {"\xF0\x9F\x91\xA4", "\xF0\x9F\x91\xA5"};
+    for (auto e : emojis) {
+        size_t p = text.find(e);
+        if (p == std::string::npos) continue;
+        size_t i = p + 4;  // skip the 4-byte emoji
+        while (i < text.size() && (text[i] == ' ' || text[i] == ':')) ++i;
+        if (i < text.size() && std::isdigit((unsigned char)text[i])) {
+            int n = 0;
+            while (i < text.size() && std::isdigit((unsigned char)text[i])) n = n * 10 + (text[i++] - '0');
+            return n;
+        }
+    }
+    // 2) spelled out ("seed" covers seed/seeds/seeder/seeders), case-insensitive:
+    //    number right after ("seeders: 45" / "seeders 45") or right before ("45 seeders").
+    std::string low = text;
+    for (auto& c : low) c = (char)std::tolower((unsigned char)c);
+    size_t p = low.find("seed");
+    if (p != std::string::npos) {
+        size_t i = p + 4;
+        while (i < low.size() && std::isalpha((unsigned char)low[i])) ++i;  // rest of the word
+        size_t j = i;
+        while (j < low.size() && (low[j] == ' ' || low[j] == ':')) ++j;
+        if (j < low.size() && std::isdigit((unsigned char)low[j])) {
+            int n = 0;
+            while (j < low.size() && std::isdigit((unsigned char)low[j])) n = n * 10 + (low[j++] - '0');
+            return n;
+        }
+        // number immediately before the word: walk back over spaces then digits
+        long k = (long)p - 1;
+        while (k >= 0 && low[k] == ' ') --k;
+        long end = k;
+        while (k >= 0 && std::isdigit((unsigned char)low[k])) --k;
+        if (k < end) {
+            try {
+                return std::stoi(low.substr(k + 1, end - k));
+            } catch (...) {
+            }
+        }
+    }
+    return -1;
+}
+
 /// Detect a debrid-served stream from its `name` (e.g. "[RD+]"/"[RD download]"/
 /// "[AD+]"/"[RD⚡]"). Sets `cached` (best-effort: '+'/⚡ = cached, "download"/⬇/⏳ =
 /// not). Debrid-ness is conveyed only by this label convention — there is no
@@ -727,6 +777,9 @@ inline media::Media streamToMedia(const StreamOption& s, const std::string& addo
         if (!codec.empty()) detail = codec;
         if (!size.empty()) detail += (detail.empty() ? "" : "  ·  ") + size;
         m.detail = detail;
+        // Addon-provided seeder count (the only peer-count available pre-playback);
+        // surfaced on the torrent row. -1 stays -1 when the addon omits it.
+        m.seeders = parseSeeders(blob);
 #endif
     } else if (!s.ytId.empty()) {
         m.kind = media::SourceKind::Youtube;

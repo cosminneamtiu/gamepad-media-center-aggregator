@@ -202,6 +202,12 @@ struct Media {
     std::string detail;  // secondary line: codec · size · seeders (our own re-render)
     SourceKind kind = SourceKind::Direct;
     bool cached = true;  // debrid cache hint (best-effort; ⚡ vs pending). false = uncached
+    // Addon-provided seeder/peer count for a torrent source (Torrentio & co. put
+    // "👤 45" / "👥 45" in the stream name/title). -1 = unknown. NEUTRAL field: it
+    // is not gated (declared on every build) and Plex/Jellyfin never set it — it
+    // stays -1 there. This is the ONLY peer-count available BEFORE playback (the
+    // on-device engine isn't running yet); the torrent source row surfaces it.
+    int seeders = -1;
 #if defined(ENABLE_TORRENT)
     // Torrent source (SourceKind::Torrent): the raw infoHash, the chosen file
     // index and the addon-provided tracker/DHT hints the on-device engine needs.

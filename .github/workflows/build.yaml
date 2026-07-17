@@ -124,7 +124,8 @@ jobs:
     - name: Update dependencies
       run: |
         dkp-pacman --noconfirm -U $BASE_URL/hacBrewPack-3.05-1-x86_64.pkg.tar.zst
-        for pkg in mbedtls-3.6.5-1 libssh2-1.11.1-1 dav1d-1.5.3-1 curl-8.16.0-2 ffmpeg-7.1.5-5 libmpv${{ matrix.shuffix }}-0.36.0-5 nspmini-main-1; do
+        # mbedtls 3.6.5-1 -> 3.6.7-1: switch-portlibs dropped the 3.6.5 asset too.
+        for pkg in mbedtls-3.6.7-1 libssh2-1.11.1-1 dav1d-1.5.3-1 curl-8.16.0-2 ffmpeg-7.1.5-5 libmpv${{ matrix.shuffix }}-0.36.0-5 nspmini-main-1; do
           dkp-pacman --noconfirm -U $BASE_URL/switch-${pkg}-any.pkg.tar.zst
         done
         git config --system --add safe.directory $GITHUB_WORKSPACE
@@ -213,7 +214,10 @@ jobs:
         # stay on the upstream (known-good) release.
         CURL_URL: https://github.com/thcolin/pleNx/releases/download/vita-packages
       run: |
-        for pkg in mbedtls-3.6.5-1 ffmpeg-n6.0-3 mpv-0.36.0-3; do
+        # mbedtls bumped 3.6.5-1 -> 3.6.7-1: switchfin removed the 3.6.5 asset
+        # from its vita-packages release (only 3.6.7 remains). 3.6.x is ABI-
+        # stable, so the curl/ffmpeg/mpv builds link against it unchanged.
+        for pkg in mbedtls-3.6.7-1 ffmpeg-n6.0-3 mpv-0.36.0-3; do
           wget $BASE_URL/${pkg}-arm.tar.xz
         done
         wget $CURL_URL/curl-8.16.0-3-arm.tar.xz

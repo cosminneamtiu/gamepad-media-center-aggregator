@@ -113,7 +113,8 @@ find_package(Threads REQUIRED)
 # desktop paths and do not apply there. On every console we also flip the SHA-1
 # backend to mbedtls (mbedcrypto, already pulled in by the curl portlib) and skip
 # the CLI PoC, which is a desktop driver with no meaning inside a .nro/.vpk/.pkg:
-#   - Switch : libnx `bsd` sockets   (socket.cpp #if __SWITCH__)   [verified]
+#   - Switch : libnx `bsd` sockets   (socket.cpp #if __SWITCH__ — see the explicit
+#              -D__SWITCH__ on torrent_engine below; not a compiler builtin)
 #   - Vita   : SceNet rewrite         (socket.cpp #elif __vita__)   [verified compile]
 #   - PS4    : openorbis FreeBSD BSD   (socket.cpp POSIX #else)      [verified compile]
 if (PLATFORM_SWITCH OR PLATFORM_PSV OR PLATFORM_PS4)
@@ -141,6 +142,18 @@ add_library(torrent_engine STATIC ${TORRENT_ENGINE_SOURCES})
 target_include_directories(torrent_engine PUBLIC ${TORRENT_INCLUDE})
 target_compile_features(torrent_engine PUBLIC cxx_std_17)
 target_link_libraries(torrent_engine PUBLIC Threads::Threads)
+
+# __SWITCH__ is NOT a compiler builtin (unlike Vita's __vita__ and PS4's __ORBIS__,
+# which their toolchains predefine). devkitPro carries it in NX_COMMON_FLAGS and the
+# borealis toolchain propagates it only through borealis' own target defs — but
+# torrent_engine does NOT link borealis, so without this it silently compiles
+# socket.cpp / util.cpp on their POSIX/desktop paths. util.cpp's std::random_device
+# then opens /dev/urandom (absent on Switch) → NULL FILE* → Data Abort on the first
+# peer-id draw. Define it explicitly so the libnx seams (randomGet, bsd socket
+# lifecycle) actually compile in. Vita/PS4 don't need this (compiler predefines).
+if (PLATFORM_SWITCH)
+    target_compile_definitions(torrent_engine PRIVATE __SWITCH__)
+endif ()
 # µTP transport: app/src/torrent/utp.cpp includes libutp's utp.h and links libutp.
 # PRIVATE — libutp is an implementation detail hidden behind PeerTransport.
 target_link_libraries(torrent_engine PRIVATE utp)

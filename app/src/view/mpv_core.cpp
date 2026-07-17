@@ -264,7 +264,14 @@ void MPVCore::init() {
         .context = gxm->context,
         .shader_patcher = gxm->shader_patcher,
         .buffer_index = 0,
-        .msaa = SCE_GXM_MULTISAMPLE_4X,
+        // The video FBO is a fullscreen quad — MSAA antialiases geometry edges,
+        // of which it has none, so 4X only wastes CDRAM. NONE here must match
+        // the FBO's render target (framebufferOpts.msaa below): it drops the
+        // FBO depth/stencil surface from ~8 MB to ~2 MB (960x544), ~6 MB of
+        // CDRAM freed exactly during playback, where GPU memory is tightest and
+        // the FBO alloc already fails first under pressure. The window UI keeps
+        // its own MSAA (nanovg has edgeAntiAlias off, so that AA is load-bearing).
+        .msaa = SCE_GXM_MULTISAMPLE_NONE,
     };
     mpv_render_param params[] = {
         {MPV_RENDER_PARAM_API_TYPE, const_cast<char *>(MPV_RENDER_API_TYPE_GXM)},
@@ -294,6 +301,9 @@ void MPVCore::init() {
                 .display_width = texture_width,
                 .display_height = texture_height,
                 .display_stride = texture_stride,
+                // No MSAA for the video FBO (must match gxm_params.msaa above):
+                // saves ~6 MB CDRAM on its depth/stencil, no visual cost.
+                .msaa = SCE_GXM_MULTISAMPLE_NONE,
             };
             NVGXMframebuffer *fbo = gxmCreateFramebuffer(&framebufferOpts);
             if (fbo != nullptr && fbo->gxm_render_target != nullptr) {

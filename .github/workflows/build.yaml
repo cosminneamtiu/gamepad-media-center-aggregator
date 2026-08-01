@@ -140,6 +140,7 @@ jobs:
           -DPLATFORM_SWITCH=ON \
           -DENABLE_TORRENT=ON \
           -DUSE_LIBUSBHSFS=ON \
+          -DENABLE_TORRENT=ON \
           -DBUILTIN_NSP=${{ github.event.inputs.disable_builtin_nsp && 'OFF' || 'ON' }} \
           -DVERSION_BUILD=${{ github.run_number }}
         make -C build GMCA.nro -j$(nproc)
@@ -228,7 +229,8 @@ jobs:
     - name: Build
       run: |
         cmake -B build -G Ninja -DPLATFORM_PSV=ON -DUSE_GXM=ON \
-          -DUSE_VITA_SHARK=OFF -DVERSION_BUILD=${{ github.run_number }}
+          -DUSE_VITA_SHARK=OFF -DENABLE_TORRENT=ON \
+          -DVERSION_BUILD=${{ github.run_number }}
         cmake --build build
     - name: Upload vpk
       uses: actions/upload-artifact@v6

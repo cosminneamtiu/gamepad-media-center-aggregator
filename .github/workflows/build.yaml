@@ -138,6 +138,7 @@ jobs:
         cmake -B build ${{ matrix.cmake }} \
           -DCMAKE_BUILD_TYPE=Release \
           -DPLATFORM_SWITCH=ON \
+          -DENABLE_TORRENT=ON \
           -DUSE_LIBUSBHSFS=ON \
           -DBUILTIN_NSP=${{ github.event.inputs.disable_builtin_nsp && 'OFF' || 'ON' }} \
           -DVERSION_BUILD=${{ github.run_number }}
@@ -178,7 +179,7 @@ jobs:
       env:
         OPENORBIS: /opt/pacbrew/ps4/openorbis
       run: |
-        cmake -B build -DPLATFORM_PS4=ON -DVERSION_BUILD=${{ github.run_number }}
+        cmake -B build -DPLATFORM_PS4=ON -DENABLE_TORRENT=ON -DVERSION_BUILD=${{ github.run_number }}
         make -C build -j$(nproc)
     - name: Upload pkg
       uses: actions/upload-artifact@v6

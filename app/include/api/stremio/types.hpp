@@ -35,6 +35,7 @@
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cctype>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -250,6 +251,11 @@ struct Manifest {
     std::set<std::string> resources;  // catalog | meta | stream | subtitles (flattened)
     std::set<std::string> types;      // movie | series | …
     std::vector<std::string> idPrefixes;
+    struct ResourceFilter {
+        std::set<std::string> types;
+        std::vector<std::string> idPrefixes;
+    };
+    std::map<std::string, ResourceFilter> resourceFilters;
     std::vector<Catalog> catalogs;
 };
 
@@ -264,10 +270,16 @@ struct Addon {
     /// - id (when given) must match an idPrefix (empty idPrefixes[] = "all ids")
     bool supports(const std::string& resource, const std::string& type, const std::string& id = "") const {
         if (manifest.resources.count(resource) == 0) return false;
-        if (!manifest.types.empty() && manifest.types.count(type) == 0) return false;
-        if (!id.empty() && !manifest.idPrefixes.empty()) {
+        const auto rf = manifest.resourceFilters.find(resource);
+        const std::set<std::string>& types =
+            (rf != manifest.resourceFilters.end() && !rf->second.types.empty()) ? rf->second.types : manifest.types;
+        const std::vector<std::string>& idPrefixes =
+            (rf != manifest.resourceFilters.end() && !rf->second.idPrefixes.empty()) ? rf->second.idPrefixes
+                                                                                      : manifest.idPrefixes;
+        if (!types.empty() && types.count(type) == 0) return false;
+        if (!id.empty() && !idPrefixes.empty()) {
             bool ok = false;
-            for (const auto& pfx : manifest.idPrefixes) {
+            for (const auto& pfx : idPrefixes) {
                 if (id.rfind(pfx, 0) == 0) {
                     ok = true;
                     break;
@@ -320,14 +332,27 @@ inline Manifest parseManifest(const nlohmann::json& j) {
     m.name = jstr(j, "name", m.id);
     m.version = jstr(j, "version");
     // `resources` may be a list of STRINGS (["catalog","meta"]) OR a list of
-    // OBJECTS ([{"name":"stream","types":[…],"idPrefixes":[…]}]). Flatten to a
-    // set of names; per-resource type/id overrides are ignored for now.
+    // OBJECTS ([{"name":"stream","types":[…],"idPrefixes":[…]}]). Preserve the
+    // per-resource filters: stream-only addons such as Torrentio can advertise
+    // their supported ids/types there instead of at the manifest top level.
     if (j.contains("resources") && j["resources"].is_array()) {
         for (auto& r : j["resources"]) {
-            if (r.is_string())
+            if (r.is_string()) {
                 m.resources.insert(r.get<std::string>());
-            else if (r.is_object())
-                m.resources.insert(jstr(r, "name"));
+            } else if (r.is_object()) {
+                std::string name = jstr(r, "name");
+                if (name.empty()) continue;
+                m.resources.insert(name);
+                Manifest::ResourceFilter filter;
+                if (r.contains("types") && r["types"].is_array())
+                    for (auto& t : r["types"])
+                        if (t.is_string()) filter.types.insert(t.get<std::string>());
+                if (r.contains("idPrefixes") && r["idPrefixes"].is_array())
+                    for (auto& p : r["idPrefixes"])
+                        if (p.is_string()) filter.idPrefixes.push_back(p.get<std::string>());
+                if (!filter.types.empty() || !filter.idPrefixes.empty())
+                    m.resourceFilters[name] = std::move(filter);
+            }
         }
     }
     if (j.contains("types") && j["types"].is_array())

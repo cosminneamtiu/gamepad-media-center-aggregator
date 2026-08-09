@@ -206,7 +206,7 @@ void MPVCore::init() {
         //  mpv_set_option_string(mpv, "msg-level", "all=no");
         mpv_set_option_string(mpv, "msg-level", "all=v");
     } else if (brls::Application::isDebuggingViewEnabled()) {
-        mpv_request_log_messages(mpv, "info");
+        mpv_request_log_messages(mpv, "debug");
     }
 
 #if (defined(__APPLE__) || defined(__linux__) || defined(_WIN32)) && !defined(ANDROID)
@@ -741,6 +741,7 @@ void MPVCore::reset() {
 
 void MPVCore::setUrl(const std::string &url, const std::string &extra, const std::string &method, uint64_t userdata) {
     brls::Logger::debug("MPVCore {} ({}) extra: ({})", method, url, extra);
+    brls::Logger::info("MPVCore: queuing loadfile command");
     if (mpv_client_api_version() >= MPV_MAKE_VERSION(2, 3)) {
         const char *cmd[] = {"loadfile", url.c_str(), method.c_str(), "0", extra.c_str(), nullptr};
         mpv_command_async(this->mpv, userdata, cmd);
@@ -748,6 +749,7 @@ void MPVCore::setUrl(const std::string &url, const std::string &extra, const std
         const char *cmd[] = {"loadfile", url.c_str(), method.c_str(), extra.c_str(), nullptr};
         mpv_command_async(this->mpv, userdata, cmd);
     }
+    brls::Logger::info("MPVCore: loadfile command queued");
 }
 
 void MPVCore::togglePlay() { this->command("cycle", "pause"); }

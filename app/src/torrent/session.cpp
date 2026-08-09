@@ -10,8 +10,11 @@
 
 #include "torrent/session.hpp"
 
+#include <chrono>
 #include <cctype>
+#include <thread>
 
+#include "api/http.hpp"
 #include "torrent/engine.hpp"
 #include "torrent/log.hpp"
 
@@ -111,6 +114,33 @@ std::string EngineSession::open(const std::string& infoHash, int fileIdx, const 
         engine->close();
         return "";
     }
+
+    // Wait until a small contiguous window is buffered so mpv's first read
+    // returns data immediately instead of blocking on a missing piece.
+    constexpr int64_t kMinPrebuffer = 512 * 1024;
+    constexpr int kPrebufferTimeoutMs = 30000;
+    auto prebufStart = std::chrono::steady_clock::now();
+    while (engine->active() && engine->stats().contiguousReadyBytes < kMinPrebuffer) {
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::steady_clock::now() - prebufStart)
+                           .count();
+        if (elapsed > kPrebufferTimeoutMs) {
+            logWarn("torrent session: pre-buffer timeout (%d ms), returning URL anyway", kPrebufferTimeoutMs);
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    logInfo("torrent session: pre-buffer %lld bytes ready", (long long)engine->stats().contiguousReadyBytes);
+
+    // Probe the local HTTP server before handing the URL to mpv. A failure here
+    // is informative: it means the server is unreachable or the first read blocks.
+    try {
+        HTTP::get(url, HTTP::Range{0, 0}, HTTP::Timeout{2000});
+        logInfo("torrent session: local HTTP probe OK");
+    } catch (const std::exception& ex) {
+        logWarn("torrent session: local HTTP probe failed: %s", ex.what());
+    }
+
     logInfo("torrent session: ready %s", url.c_str());
     return url;
 }

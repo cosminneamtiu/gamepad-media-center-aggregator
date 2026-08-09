@@ -79,6 +79,7 @@ public:
     std::string localUrl() const;
     bool metadataReady() const override { return metadataReady_.load(); }
     void close();
+    bool active() const { return running_.load(); }
 
     // --- convenience waits for the PoC / tests ---
     bool waitForMetadata(int timeoutMs);

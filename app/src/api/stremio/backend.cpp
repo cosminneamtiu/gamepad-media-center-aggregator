@@ -988,7 +988,9 @@ media::PlaybackSource StremioBackend::resolvePlayback(
         std::string url = torrent::EngineSession::instance().open(
             version.infoHash, version.torrentFileIdx, version.torrentSources);
         if (url.empty()) return {};
-        std::string extra = "network-timeout=" + std::to_string(HTTP::TIMEOUT / 100);
+        // No network-timeout for the local HTTP server: it is not a remote stream
+        // and the option has been observed to make mpv unhappy on Switch.
+        std::string extra;
         return {url, extra, false, "directplay"};
     }
 #endif

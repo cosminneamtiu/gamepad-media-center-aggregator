@@ -197,6 +197,7 @@ void HttpServer::acceptLoop() {
 }
 
 void HttpServer::handleClient(int fd) {
+    try {
     // Read the request headers (until CRLFCRLF). Requests are tiny.
     std::string req;
     char buf[4096];
@@ -206,6 +207,11 @@ void HttpServer::handleClient(int fd) {
         req.append(buf, (size_t)n);
         if (req.size() > 16384) return;  // header flood guard
     }
+
+    // Extract the request line for diagnostics (first line up to CRLF).
+    size_t reqLineEnd = req.find("\r\n");
+    std::string reqLine = reqLineEnd == std::string::npos ? req : req.substr(0, reqLineEnd);
+    logInfo("http-server: request \"%s\"", reqLine.c_str());
 
     bool head = req.rfind("HEAD ", 0) == 0;
     if (!head && req.rfind("GET ", 0) != 0) {
@@ -284,6 +290,11 @@ void HttpServer::handleClient(int fd) {
         if (!sendAll(fd, reinterpret_cast<char*>(chunk.data()), (size_t)got)) break;  // client closed
         pos += got;
         store_.setPlayhead(fileIdx_, pos);  // keep the picker ahead of the read
+    }
+    } catch (const std::exception& ex) {
+        logWarn("http-server: client handler crashed: %s", ex.what());
+    } catch (...) {
+        logWarn("http-server: client handler crashed: unknown exception");
     }
 }
 

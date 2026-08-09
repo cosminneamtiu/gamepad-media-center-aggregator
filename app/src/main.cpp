@@ -93,6 +93,7 @@ int main(int argc, char* argv[]) {
 #ifdef __SWITCH__
     if (argc > 0 && argv[0]) AppVersion::nro_path = argv[0];
 #endif
+    bool logOutputSet = false;
     std::vector<std::string> items;
     for (int i = 1; i < argc; i++) {
         if (std::strcmp(argv[i], "-d") == 0) {
@@ -109,6 +110,7 @@ int main(int argc, char* argv[]) {
             // the process — unbearable for diagnosing
             if (logFile) std::setvbuf(logFile, nullptr, _IOLBF, 0);
             brls::Logger::setLogOutput(logFile);
+            logOutputSet = true;
         } else if (std::strcmp(argv[i], "-version") == 0) {
             brls::Logger::info("{} {}", AppVersion::getDeviceName(), AppVersion::getCommit());
             return 0;
@@ -116,6 +118,26 @@ int main(int argc, char* argv[]) {
             items.push_back(argv[i]);
         }
     }
+
+#ifdef __SWITCH__
+    // On Switch you can't pass argv flags from the home menu / forwarder tile.
+    // Default to debug logging to a file next to the NRO so torrent/network
+    // diagnostics are always captured without any command-line options.
+    if (!logOutputSet) {
+        brls::Logger::setLogLevel(brls::LogLevel::LOG_DEBUG);
+        std::string logPath = "/switch/gmca.log";
+        if (!AppVersion::nro_path.empty()) {
+            size_t slash = AppVersion::nro_path.find_last_of("/\\");
+            if (slash != std::string::npos)
+                logPath = AppVersion::nro_path.substr(0, slash + 1) + "gmca.log";
+        }
+        FILE* logFile = std::fopen(logPath.c_str(), "w+");
+        if (logFile) {
+            std::setvbuf(logFile, nullptr, _IOLBF, 0);
+            brls::Logger::setLogOutput(logFile);
+        }
+    }
+#endif
 
 #if defined(ENABLE_TORRENT)
     // Route the torrent engine's logs into brls::Logger — plain stderr is

@@ -271,8 +271,10 @@ void HttpServer::handleClient(int fd) {
         int64_t length = end - start + 1;
 
         // Follow the player's read position with the picker.
+        logInfo("http-server: before setPlayhead call");
         logInfo("http-server: setting playhead fileIdx=%d offset=%lld", fileIdx_, (long long)start);
         store_.setPlayhead(fileIdx_, start);
+        logInfo("http-server: after setPlayhead call");
         logInfo("http-server: playhead set");
 
         std::string header;

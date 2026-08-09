@@ -133,10 +133,16 @@ void PieceStore::maybeEvictLocked() {
 }
 
 void PieceStore::setPlayhead(int fileIdx, int64_t fileOffset) {
+    logInfo("storage: setPlayhead entering fileIdx=%d offset=%lld", fileIdx, (long long)fileOffset);
     std::lock_guard<std::mutex> lk(mutex_);
+    logInfo("storage: setPlayhead mutex acquired");
     const FileEntry* fe = meta_.file(fileIdx);
-    if (!fe) return;
+    if (!fe) {
+        logWarn("storage: setPlayhead invalid fileIdx=%d (files=%zu)", fileIdx, meta_.files.size());
+        return;
+    }
     playheadGlobal_ = fe->offset + fileOffset;
+    logInfo("storage: setPlayhead done global=%lld", (long long)playheadGlobal_);
 }
 
 int PieceStore::playheadPiece() const {

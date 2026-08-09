@@ -166,8 +166,12 @@ int64_t PieceStore::contiguousBytesFromHead(int fileIdx) const {
 
 int64_t PieceStore::readFile(int fileIdx, int64_t fileOffset, uint8_t* out, int64_t len) {
     const FileEntry* fe = meta_.file(fileIdx);
-    if (!fe) return -1;
+    if (!fe) {
+        logError("storage: readFile invalid fileIdx=%d", fileIdx);
+        return -1;
+    }
     if (fileOffset >= fe->length) return 0;
+    if (len <= 0) return 0;
     len = std::min(len, fe->length - fileOffset);
     int64_t globalStart = fe->offset + fileOffset;
     int64_t copied = 0;
@@ -177,6 +181,10 @@ int64_t PieceStore::readFile(int fileIdx, int64_t fileOffset, uint8_t* out, int6
         int64_t g = globalStart + copied;
         int piece = (int)(g / meta_.pieceLength);
         int64_t intra = g % meta_.pieceLength;
+        if (piece < 0 || piece >= (int)haveMap_.size()) {
+            logError("storage: readFile out-of-bounds piece=%d (haveMap=%zu)", piece, haveMap_.size());
+            return -1;
+        }
         if (!haveMap_[piece]) {
             // Block until the covering piece lands. The picker is biased toward
             // the playhead, so this is the streaming stall point.
@@ -191,6 +199,14 @@ int64_t PieceStore::readFile(int fileIdx, int64_t fileOffset, uint8_t* out, int6
             continue;
         }
         int64_t avail = (int64_t)it->second.data.size() - intra;
+        if (avail <= 0) {
+            logError("storage: readFile non-positive avail=%lld (piece=%d data=%zu intra=%lld)",
+                (long long)avail, piece, it->second.data.size(), (long long)intra);
+            // Treat as missing so we re-fetch rather than memcpy with a bad size.
+            haveMap_[piece] = 0;
+            cv_.wait(lk);
+            continue;
+        }
         int64_t chunk = std::min(avail, len - copied);
         std::memcpy(out + copied, it->second.data.data() + intra, (size_t)chunk);
         copied += chunk;

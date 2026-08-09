@@ -14,7 +14,6 @@
 #include <cctype>
 #include <thread>
 
-#include "api/http.hpp"
 #include "torrent/engine.hpp"
 #include "torrent/log.hpp"
 
@@ -131,15 +130,6 @@ std::string EngineSession::open(const std::string& infoHash, int fileIdx, const 
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     logInfo("torrent session: pre-buffer %lld bytes ready", (long long)engine->stats().contiguousReadyBytes);
-
-    // Probe the local HTTP server before handing the URL to mpv. A failure here
-    // is informative: it means the server is unreachable or the first read blocks.
-    try {
-        HTTP::get(url, HTTP::Range{0, 0}, HTTP::Timeout{2000});
-        logInfo("torrent session: local HTTP probe OK");
-    } catch (const std::exception& ex) {
-        logWarn("torrent session: local HTTP probe failed: %s", ex.what());
-    }
 
     logInfo("torrent session: ready %s", url.c_str());
     return url;

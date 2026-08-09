@@ -198,99 +198,135 @@ void HttpServer::acceptLoop() {
 
 void HttpServer::handleClient(int fd) {
     try {
-    // Read the request headers (until CRLFCRLF). Requests are tiny.
-    std::string req;
-    char buf[4096];
-    while (req.find("\r\n\r\n") == std::string::npos) {
-        int n = sockRecv(fd, buf, sizeof(buf));
-        if (n <= 0) return;
-        req.append(buf, (size_t)n);
-        if (req.size() > 16384) return;  // header flood guard
-    }
+        // Read the request headers (until CRLFCRLF). Requests are tiny.
+        std::string req;
+        char buf[4096];
+        while (req.find("\r\n\r\n") == std::string::npos) {
+            int n = sockRecv(fd, buf, sizeof(buf));
+            if (n <= 0) return;
+            req.append(buf, (size_t)n);
+            if (req.size() > 16384) return;  // header flood guard
+        }
 
-    // Extract the request line for diagnostics (first line up to CRLF).
-    size_t reqLineEnd = req.find("\r\n");
-    std::string reqLine = reqLineEnd == std::string::npos ? req : req.substr(0, reqLineEnd);
-    logInfo("http-server: request \"%s\"", reqLine.c_str());
+        // Extract the request line for diagnostics (first line up to CRLF).
+        size_t reqLineEnd = req.find("\r\n");
+        std::string reqLine = reqLineEnd == std::string::npos ? req : req.substr(0, reqLineEnd);
+        logInfo("http-server: request \"%s\" (fd=%d)", reqLine.c_str(), fd);
 
-    bool head = req.rfind("HEAD ", 0) == 0;
-    if (!head && req.rfind("GET ", 0) != 0) {
-        const char* r = "HTTP/1.1 405 Method Not Allowed\r\nAllow: GET, HEAD\r\nContent-Length: 0\r\n\r\n";
-        sendAll(fd, r, std::strlen(r));
-        return;
-    }
+        bool head = req.rfind("HEAD ", 0) == 0;
+        if (!head && req.rfind("GET ", 0) != 0) {
+            logWarn("http-server: rejecting non-GET/HEAD method");
+            const char* r = "HTTP/1.1 405 Method Not Allowed\r\nAllow: GET, HEAD\r\nContent-Length: 0\r\n\r\n";
+            sendAll(fd, r, std::strlen(r));
+            return;
+        }
 
-    // Parse an optional Range header (case-insensitive).
-    int64_t start = 0, end = fileLength_ - 1;
-    bool partial = false;
-    {
-        std::string lower = req;
-        for (auto& c : lower) c = (char)tolower((unsigned char)c);
-        size_t rp = lower.find("range:");
-        if (rp != std::string::npos) {
-            size_t eq = lower.find("bytes=", rp);
-            if (eq != std::string::npos) {
-                eq += 6;
-                size_t dash = lower.find('-', eq);
-                size_t crlf = lower.find('\r', dash);
-                std::string a = lower.substr(eq, dash - eq);
-                std::string b = lower.substr(dash + 1, crlf - dash - 1);
-                // Guard std::stoll: a malformed Range must not throw across a
-                // detached thread (that would std::terminate the whole process).
-                try {
-                    if (!a.empty()) start = std::stoll(a);
-                    if (!b.empty()) end = std::stoll(b);
-                    partial = true;
-                } catch (const std::exception&) {
-                    start = 0;
-                    end = fileLength_ - 1;
-                    partial = false;
+        // Parse an optional Range header (case-insensitive).
+        int64_t start = 0, end = fileLength_ - 1;
+        bool partial = false;
+        {
+            std::string lower = req;
+            for (auto& c : lower) c = (char)tolower((unsigned char)c);
+            size_t rp = lower.find("range:");
+            if (rp != std::string::npos) {
+                size_t eq = lower.find("bytes=", rp);
+                if (eq != std::string::npos) {
+                    eq += 6;
+                    size_t dash = lower.find('-', eq);
+                    size_t crlf = lower.find('\r', dash);
+                    std::string a = lower.substr(eq, dash - eq);
+                    std::string b = lower.substr(dash + 1, crlf - dash - 1);
+                    // Guard std::stoll: a malformed Range must not throw across a
+                    // detached thread (that would std::terminate the whole process).
+                    try {
+                        if (!a.empty()) start = std::stoll(a);
+                        if (!b.empty()) end = std::stoll(b);
+                        partial = true;
+                    } catch (const std::exception&) {
+                        start = 0;
+                        end = fileLength_ - 1;
+                        partial = false;
+                    }
                 }
             }
         }
-    }
-    if (fileLength_ <= 0) {
-        const char* r = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
-        sendAll(fd, r, std::strlen(r));
-        return;
-    }
-    start = std::max<int64_t>(0, start);
-    end = std::min<int64_t>(end, fileLength_ - 1);
-    if (start > end) {
-        std::string r = "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */" + std::to_string(fileLength_) +
-                        "\r\nContent-Length: 0\r\n\r\n";
-        sendAll(fd, r.data(), r.size());
-        return;
-    }
-    int64_t length = end - start + 1;
+        logInfo("http-server: range parsed start=%lld end=%lld partial=%s fileLength=%lld",
+            (long long)start, (long long)end, partial ? "yes" : "no", (long long)fileLength_);
 
-    // Follow the player's read position with the picker.
-    store_.setPlayhead(fileIdx_, start);
+        if (fileLength_ <= 0) {
+            logWarn("http-server: fileLength <= 0, returning 500");
+            const char* r = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
+            sendAll(fd, r, std::strlen(r));
+            return;
+        }
+        start = std::max<int64_t>(0, start);
+        end = std::min<int64_t>(end, fileLength_ - 1);
+        if (start > end) {
+            logWarn("http-server: range unsatisfiable start=%lld end=%lld", (long long)start, (long long)end);
+            std::string r = "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */" + std::to_string(fileLength_) +
+                            "\r\nContent-Length: 0\r\n\r\n";
+            sendAll(fd, r.data(), r.size());
+            return;
+        }
+        int64_t length = end - start + 1;
 
-    std::string header;
-    header += partial ? "HTTP/1.1 206 Partial Content\r\n" : "HTTP/1.1 200 OK\r\n";
-    header += "Content-Type: " + guessContentType(fileName_) + "\r\n";
-    header += "Accept-Ranges: bytes\r\n";
-    header += "Content-Length: " + std::to_string(length) + "\r\n";
-    if (partial)
-        header += "Content-Range: bytes " + std::to_string(start) + "-" + std::to_string(end) + "/" +
-                  std::to_string(fileLength_) + "\r\n";
-    header += "Connection: close\r\n\r\n";
-    if (!sendAll(fd, header.data(), header.size())) return;
-    if (head) return;
+        // Follow the player's read position with the picker.
+        logInfo("http-server: setting playhead fileIdx=%d offset=%lld", fileIdx_, (long long)start);
+        store_.setPlayhead(fileIdx_, start);
+        logInfo("http-server: playhead set");
 
-    // Stream the body, blocking on the store for pieces not yet downloaded.
-    const int64_t kChunk = 256 * 1024;
-    std::vector<uint8_t> chunk((size_t)kChunk);
-    int64_t pos = start;
-    while (pos <= end && running_) {
-        int64_t want = std::min(kChunk, end - pos + 1);
-        int64_t got = store_.readFile(fileIdx_, pos, chunk.data(), want);
-        if (got <= 0) break;                                                          // stopped / EOF
-        if (!sendAll(fd, reinterpret_cast<char*>(chunk.data()), (size_t)got)) break;  // client closed
-        pos += got;
-        store_.setPlayhead(fileIdx_, pos);  // keep the picker ahead of the read
-    }
+        std::string header;
+        header += partial ? "HTTP/1.1 206 Partial Content\r\n" : "HTTP/1.1 200 OK\r\n";
+        header += "Content-Type: " + guessContentType(fileName_) + "\r\n";
+        header += "Accept-Ranges: bytes\r\n";
+        header += "Content-Length: " + std::to_string(length) + "\r\n";
+        if (partial)
+            header += "Content-Range: bytes " + std::to_string(start) + "-" + std::to_string(end) + "/" +
+                      std::to_string(fileLength_) + "\r\n";
+        header += "Connection: close\r\n\r\n";
+        logInfo("http-server: sending response headers (%zu bytes)", header.size());
+        if (!sendAll(fd, header.data(), header.size())) {
+            logWarn("http-server: failed to send headers");
+            return;
+        }
+        logInfo("http-server: headers sent");
+        if (head) {
+            logInfo("http-server: HEAD request done");
+            return;
+        }
+
+        // Stream the body, blocking on the store for pieces not yet downloaded.
+        const int64_t kChunk = 64 * 1024;
+        logInfo("http-server: allocating %lld byte chunk buffer", (long long)kChunk);
+        std::vector<uint8_t> chunk((size_t)kChunk);
+        logInfo("http-server: chunk buffer allocated");
+        int64_t pos = start;
+        int iterations = 0;
+        while (pos <= end && running_) {
+            ++iterations;
+            int64_t want = std::min(kChunk, end - pos + 1);
+            bool verbose = iterations <= 5 || (iterations % 100) == 0;
+            if (verbose)
+                logInfo("http-server: readFile iteration=%d pos=%lld want=%lld", iterations, (long long)pos, (long long)want);
+            int64_t got = store_.readFile(fileIdx_, pos, chunk.data(), want);
+            if (verbose)
+                logInfo("http-server: readFile returned %lld", (long long)got);
+            if (got <= 0) {
+                logWarn("http-server: readFile returned %lld, stopping body loop after %d iterations", (long long)got, iterations);
+                break;  // stopped / EOF
+            }
+            if (verbose)
+                logInfo("http-server: sending %lld bytes to client", (long long)got);
+            if (!sendAll(fd, reinterpret_cast<char*>(chunk.data()), (size_t)got)) {
+                logWarn("http-server: sendAll failed, client likely closed (iteration=%d)", iterations);
+                break;  // client closed
+            }
+            if (verbose)
+                logInfo("http-server: sent %lld bytes", (long long)got);
+            pos += got;
+            store_.setPlayhead(fileIdx_, pos);  // keep the picker ahead of the read
+        }
+        logInfo("http-server: finished streaming body (iterations=%d finalPos=%lld)", iterations, (long long)pos);
     } catch (const std::exception& ex) {
         logWarn("http-server: client handler crashed: %s", ex.what());
     } catch (...) {

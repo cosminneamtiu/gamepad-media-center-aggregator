@@ -336,10 +336,15 @@ void DhtManager::serviceReadable() {
     uint8_t buf[2048];  // KRPC datagrams are well under the UDP MTU
     std::string ip;
     uint16_t port = 0;
+    static bool s_firstRecv = false;
     for (;;) {
         int n = udp_.recvFrom(buf, sizeof(buf) - 1, &ip, &port);
         if (n <= 0) break;  // 0 = would-block, -1 = error
-        buf[n] = 0;         // NUL-terminate as cheap insurance for the bencode scanners
+        if (!s_firstRecv) {
+            s_firstRecv = true;
+            logInfo("dht: first UDP datagram received from %s:%u", ip.c_str(), port);
+        }
+        buf[n] = 0;  // NUL-terminate as cheap insurance for the bencode scanners
         pump(buf, (size_t)n, ip, port);
     }
 }

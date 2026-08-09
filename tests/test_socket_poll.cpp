@@ -55,14 +55,10 @@ int main() {
     CHECK(tx.open());
     CHECK(rx.handle() >= 64);  // the regression scenario is actually engaged
 
-    // Bind rx to an ephemeral loopback port via a raw sockaddr on its fd.
+    // UdpSocket::open() now binds to an ephemeral port automatically. Query it
+    // so the sender can target the receiver.
     {
         sockaddr_in addr;
-        std::memset(&addr, 0, sizeof(addr));
-        addr.sin_family = AF_INET;
-        addr.sin_port = 0;
-        inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-        CHECK(::bind(rx.handle(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0);
         socklen_t alen = sizeof(addr);
         CHECK(::getsockname(rx.handle(), reinterpret_cast<sockaddr*>(&addr), &alen) == 0);
         uint16_t port = ntohs(addr.sin_port);

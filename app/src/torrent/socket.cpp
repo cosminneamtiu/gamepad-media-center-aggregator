@@ -251,6 +251,18 @@ bool UdpSocket::open() {
         close();
         return false;
     }
+    // Explicitly bind to an ephemeral port. Some stacks do this implicitly on
+    // the first sendto(), but doing it up-front guarantees replies can be
+    // received on every target (Switch/libnx in particular).
+    SceNetSockaddrIn bindAddr;
+    std::memset(&bindAddr, 0, sizeof(bindAddr));
+    bindAddr.sin_family = SCE_NET_AF_INET;
+    bindAddr.sin_port   = sceNetHtons(0);
+    sceNetInetPton(SCE_NET_AF_INET, "0.0.0.0", &bindAddr.sin_addr);
+    if (sceNetBind(fd, reinterpret_cast<SceNetSockaddr*>(&bindAddr), sizeof(bindAddr)) < 0) {
+        close();
+        return false;
+    }
     return true;
 }
 
@@ -513,6 +525,18 @@ bool UdpSocket::open() {
     fd = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) return false;
     if (!setNonBlocking(fd)) {
+        close();
+        return false;
+    }
+    // Explicitly bind to an ephemeral port. Desktop OSes usually do this
+    // implicitly on the first sendto(), but Switch/libnx requires an explicit
+    // bind for the bsd service to deliver incoming datagrams.
+    struct sockaddr_in bindAddr;
+    std::memset(&bindAddr, 0, sizeof(bindAddr));
+    bindAddr.sin_family = AF_INET;
+    bindAddr.sin_port   = 0;
+    inet_pton(AF_INET, "0.0.0.0", &bindAddr.sin_addr);
+    if (::bind(fd, reinterpret_cast<struct sockaddr*>(&bindAddr), sizeof(bindAddr)) < 0) {
         close();
         return false;
     }

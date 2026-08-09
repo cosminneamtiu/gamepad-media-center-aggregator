@@ -1,0 +1,398 @@
+14:26:48.084[0;34m[INFO][0m Load config from: sdmc:/switch/GMCA/config.json
+14:26:48.093[0;34m[INFO][0m init NX v1.1.0-7ee3cdf device 9d564c75126489c54ce37c675decb13b5055093bd63eb02ac6863fe024a9a921 from sdmc:/switch/GMCA/config.json
+14:26:48.098[0;34m[INFO][0m switch system theme: Dark
+14:26:48.103[0;34m[INFO][0m Using platform Switch
+14:26:48.114[0;31m[ERROR][0m Cannot load locale en-GB: directory romfs:/i18n/en-GB doesn't exist
+14:26:48.216[0;32m[DEBUG][0m Vibration clear #0
+14:26:48.218[0;32m[DEBUG][0m Vibration clear #1
+14:26:48.222[0;32m[DEBUG][0m Vibration clear #2
+14:26:48.226[0;32m[DEBUG][0m Vibration clear #3
+14:26:48.231[0;32m[DEBUG][0m Vibration clear #4
+14:26:48.237[0;34m[INFO][0m switch system locale: en-GB
+14:26:48.240[0;33m[WARNING][0m Cannot find custom font, (Searched at: sdmc:/switch/GMCA/font.ttf)
+14:26:48.247[0;34m[INFO][0m Load emoji font: romfs:/font/emoji.ttf
+14:26:48.263[0;32m[DEBUG][0m LoadingActivity: create
+14:26:48.266[0;32m[DEBUG][0m Adding an inputs block token (tokens=1)
+14:26:48.326[0;32m[DEBUG][0m push activity to the stack
+14:26:48.329[0;32m[DEBUG][0m Removing an inputs block token (tokens=0)
+14:26:48.332[0;32m[DEBUG][0m Adding an inputs block token (tokens=1)
+14:26:48.335[0;32m[DEBUG][0m curl global init 0
+14:26:48.335[0;34m[INFO][0m ThreadPool start 4
+14:26:48.343[0;34m[INFO][0m AppletFocusState_InFocus
+14:26:48.348[0;34m[INFO][0m Window size changed to 1280x720, content size: 1280x720 windowScale: 1
+14:26:48.355[0;34m[INFO][0m scale factor: 1
+14:26:48.625[0;32m[DEBUG][0m Removing an inputs block token (tokens=0)
+14:26:48.628[0;32m[DEBUG][0m LoadingActivity: delete
+14:26:48.630[0;32m[DEBUG][0m MainActivity: create
+14:26:48.633[0;32m[DEBUG][0m Adding an inputs block token (tokens=1)
+14:26:48.659[0;34m[INFO][0m set memory cache: 20MB
+14:26:48.663[0;34m[INFO][0m MPV hardware decode: auto
+14:26:48.694[0;34m[INFO][0m version: mpv 0.36.0 ffmpeg 7.1.5
+14:26:48.700[0;32m[DEBUG][0m Tab HomeTab: create
+14:26:48.730[0;32m[DEBUG][0m View HRecyclerFrame: create
+14:26:48.733[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:26:48.735[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:48.738[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:48.742[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:48.746[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:48.791[0;32m[DEBUG][0m AudioPlayer: create
+14:26:48.795[0;32m[DEBUG][0m Giving focus to AutoSidebarItem
+14:26:48.802[0;32m[DEBUG][0m push activity to the stack
+14:26:48.811[0;32m[DEBUG][0m Removing an inputs block token (tokens=0)
+14:26:48.815[0;32m[DEBUG][0m delete AppletFrame brls::AppletFrame
+14:26:48.823[0;32m[DEBUG][0m del AutoSidebarItem: 
+14:26:48.828[0;31m[ERROR][0m [INSET] 0 -> 108 (frame=true footerVis=true thisY=0 saH=720 footerY=612)
+14:26:49.308[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:26:49.312[0;32m[DEBUG][0m HRecyclerFrame Cell #6 - added right
+14:26:50.013[0;33m[WARNING][0m stremio: manifest load failed https://opensubtitles.strem.io/stremio/v1: [json.exception.parse_error.101] parse error at line 1, column 1: syntax error while parsing value - invalid literal; last read: '<'
+14:26:50.754[0;34m[INFO][0m App is up to date
+14:26:51.996[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/movie/history.json: http status 500
+14:26:52.304[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/movie/watchlist.json: http status 500
+14:26:52.775[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/movie/collection.json: http status 500
+14:26:53.266[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/movie/recommendations.json: http status 500
+14:26:54.636[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/series/history.json: http status 500
+14:26:54.929[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/series/watchlist.json: http status 500
+14:26:55.452[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/series/collection.json: http status 500
+14:26:55.925[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/series/recommendations.json: http status 500
+14:26:55.945[0;32m[DEBUG][0m View HRecyclerFrame: create
+14:26:55.949[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:26:55.952[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:55.956[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:55.960[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:55.964[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:55.981[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:55.991[0;32m[DEBUG][0m View HRecyclerFrame: create
+14:26:55.994[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:26:55.997[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:56.001[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:56.006[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.011[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.027[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.043[0;32m[DEBUG][0m View HRecyclerFrame: create
+14:26:56.046[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:26:56.048[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:56.054[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.058[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.062[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.077[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.163[0;32m[DEBUG][0m View HRecyclerFrame: create
+14:26:56.171[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:26:56.175[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:56.178[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:56.181[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.200[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.255[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.283[0;32m[DEBUG][0m View HRecyclerFrame: create
+14:26:56.290[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:26:56.299[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:56.302[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:56.304[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.322[0;32m[DEBUG][0m View HRecyclerFrame: create
+14:26:56.329[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:26:56.333[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:56.337[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:26:56.341[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.349[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.362[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.406[0;32m[DEBUG][0m HRecyclerFrame Cell #3 - added right
+14:26:56.421[0;32m[DEBUG][0m HRecyclerFrame Cell #4 - added right
+14:26:56.434[0;32m[DEBUG][0m HRecyclerFrame Cell #5 - added right
+14:26:56.449[0;32m[DEBUG][0m HRecyclerFrame Cell #6 - added right
+14:26:56.477[0;32m[DEBUG][0m HRecyclerFrame Cell #3 - added right
+14:26:56.487[0;32m[DEBUG][0m HRecyclerFrame Cell #4 - added right
+14:26:56.500[0;32m[DEBUG][0m HRecyclerFrame Cell #5 - added right
+14:26:56.509[0;32m[DEBUG][0m HRecyclerFrame Cell #6 - added right
+14:26:56.571[0;32m[DEBUG][0m HRecyclerFrame Cell #3 - added right
+14:26:56.581[0;32m[DEBUG][0m HRecyclerFrame Cell #4 - added right
+14:26:56.617[0;32m[DEBUG][0m HRecyclerFrame Cell #5 - added right
+14:26:56.680[0;32m[DEBUG][0m HRecyclerFrame Cell #6 - added right
+14:26:56.728[0;32m[DEBUG][0m HRecyclerFrame Cell #3 - added right
+14:26:56.774[0;32m[DEBUG][0m HRecyclerFrame Cell #4 - added right
+14:26:56.832[0;32m[DEBUG][0m HRecyclerFrame Cell #5 - added right
+14:26:56.841[0;32m[DEBUG][0m HRecyclerFrame Cell #6 - added right
+14:26:56.851[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:26:56.860[0;32m[DEBUG][0m HRecyclerFrame Cell #3 - added right
+14:26:56.873[0;32m[DEBUG][0m HRecyclerFrame Cell #4 - added right
+14:26:56.884[0;32m[DEBUG][0m HRecyclerFrame Cell #5 - added right
+14:26:56.897[0;32m[DEBUG][0m HRecyclerFrame Cell #6 - added right
+14:26:56.905[0;32m[DEBUG][0m HRecyclerFrame Cell #3 - added right
+14:26:56.913[0;32m[DEBUG][0m HRecyclerFrame Cell #4 - added right
+14:26:56.929[0;32m[DEBUG][0m HRecyclerFrame Cell #5 - added right
+14:26:56.939[0;32m[DEBUG][0m HRecyclerFrame Cell #6 - added right
+14:26:57.594[0;32m[DEBUG][0m StremioCatalogs: create movie type movie
+14:26:57.606[0;32m[DEBUG][0m View RecyclingGrid: create
+14:26:57.627[0;32m[DEBUG][0m RecyclingGrid::checkWidth from 0 to 1216
+14:26:57.630[0;32m[DEBUG][0m RecyclingGrid::onLayout reloadData()
+14:26:57.638[0;32m[DEBUG][0m Giving focus to AutoSidebarItem (id="lib/movie")
+14:26:57.645[0;31m[ERROR][0m [INSET] 0 -> 108 (frame=true footerVis=true thisY=0 saH=720 footerY=612)
+14:26:58.286[0;32m[DEBUG][0m Giving focus to AutoSidebarItem
+14:26:59.143[0;32m[DEBUG][0m Giving focus to brls::Box (id="video/card/pic_box")
+14:26:59.594[0;32m[DEBUG][0m Giving focus to brls::Box (id="video/card/pic_box")
+14:27:00.527[0;32m[DEBUG][0m Giving focus to brls::Box (id="video/card/pic_box")
+14:27:01.094[0;32m[DEBUG][0m Tab MediaMovie: create
+14:27:01.125[0;32m[DEBUG][0m View HRecyclerFrame: create
+14:27:01.130[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:27:01.138[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:27:01.141[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:27:01.144[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:27:01.147[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:27:01.156[0;32m[DEBUG][0m Giving focus to brls::ScrollingFrame (id="movie/scroll")
+14:27:01.164[0;31m[ERROR][0m [INSET] 0 -> 108 (frame=true footerVis=true thisY=0 saH=720 footerY=612)
+14:27:01.171[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:27:01.174[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:27:01.177[0;32m[DEBUG][0m HRecyclerFrame Cell #3 - added right
+14:27:01.180[0;32m[DEBUG][0m HRecyclerFrame Cell #4 - added right
+14:27:01.184[0;32m[DEBUG][0m HRecyclerFrame Cell #5 - added right
+14:27:01.188[0;32m[DEBUG][0m HRecyclerFrame Cell #6 - added right
+14:27:01.196[0;32m[DEBUG][0m HRecyclerFrame Cell #7 - added right
+14:27:01.198[0;32m[DEBUG][0m HRecyclerFrame Cell #8 - added right
+14:27:01.509[0;32m[DEBUG][0m Giving focus to (anonymous namespace)::SourceRow (id="movie/source/0")
+14:27:02.157[0;32m[DEBUG][0m Giving focus to (anonymous namespace)::SourceRow (id="movie/source/1")
+14:27:02.959[0;32m[DEBUG][0m Giving focus to (anonymous namespace)::SourceRow (id="movie/source/2")
+14:27:03.776[0;32m[DEBUG][0m Giving focus to (anonymous namespace)::SourceRow (id="movie/source/1")
+14:27:05.092[0;32m[DEBUG][0m Giving focus to (anonymous namespace)::SourceRow (id="movie/source/2")
+14:27:05.326[0;32m[DEBUG][0m Giving focus to (anonymous namespace)::SourceRow (id="movie/source/3")
+14:27:05.863[0;32m[DEBUG][0m VideoView: created
+14:27:05.865[0;32m[DEBUG][0m MPVCore::reset
+14:27:05.888[0;32m[DEBUG][0m View VideoProfile: create
+14:27:05.899[0;32m[DEBUG][0m Adding an inputs block token (tokens=1)
+14:27:05.905[0;32m[DEBUG][0m Pushing (anonymous namespace)::SourceRow (id="movie/source/3") to the focus stack
+14:27:05.909[0;32m[DEBUG][0m Giving focus to VideoView (id="video")
+14:27:05.914[0;32m[DEBUG][0m push activity to the stack
+14:27:05.920[0;32m[DEBUG][0m Removing an inputs block token (tokens=0)
+14:27:05.925[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:06.119[0;34m[INFO][0m [torrent] torrent session: opening 39916f69ab5c3338c559bdbf5b0eb4008e1e5bab (fileIdx=0)
+14:27:06.126[0;34m[INFO][0m [torrent] engine: opening infohash 39916f69ab5c3338c559bdbf5b0eb4008e1e5bab (no name)
+14:27:06.129[0;34m[INFO][0m [torrent] utp: BEP-29 transport active (shared UDP socket)
+14:27:06.132[0;34m[INFO][0m [torrent] dht: BEP-5 mainline DHT active (node id 16a9…468c, dedicated UDP socket)
+14:27:06.135[0;34m[INFO][0m [torrent] dht: search 39916f69ab5c3338c559bdbf5b0eb4008e1e5bab (new)
+14:27:06.150[0;34m[INFO][0m [torrent] dht: bootstrap router.bittorrent.com -> 67.215.246.10:6881
+14:27:06.167[0;34m[INFO][0m [torrent] dht: bootstrap dht.transmissionbt.com -> 87.98.162.88:6881
+14:27:06.176[0;34m[INFO][0m [torrent] dht: bootstrap router.utorrent.com -> 82.221.103.244:6881
+14:27:06.341[0;32m[DEBUG][0m [torrent] dht: ping bootstrap 67.215.246.10:6881
+14:27:06.346[0;32m[DEBUG][0m [torrent] dht: ping bootstrap 87.98.162.88:6881
+14:27:06.349[0;32m[DEBUG][0m [torrent] dht: ping bootstrap 82.221.103.244:6881
+14:27:06.624[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:07.424[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:08.224[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:09.024[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:09.824[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:10.624[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:11.424[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:12.224[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:13.024[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:13.824[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:14.624[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:15.424[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:16.224[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:17.024[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:17.824[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:18.624[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:19.424[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:20.224[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:21.024[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:21.824[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:22.624[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:23.424[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:24.224[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:25.024[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:25.824[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:26.624[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:27.424[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:28.224[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:29.024[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:29.824[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:30.624[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:31.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:32.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:33.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:33.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:34.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:35.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:36.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:37.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:37.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:38.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:39.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:40.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:41.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:41.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:42.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:43.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:44.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:45.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:45.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:46.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:47.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:48.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:49.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:49.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:50.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:51.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:52.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:53.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:53.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:54.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:55.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:56.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:57.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:57.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:58.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:27:59.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:00.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:01.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:01.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:02.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:03.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:04.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:05.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:05.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:06.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:07.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:08.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:09.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:09.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:10.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:11.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:12.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:13.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:13.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:14.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:15.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:16.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:17.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:17.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:18.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:19.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:20.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:21.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:21.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:22.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:23.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:24.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:25.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:25.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:26.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:27.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:28.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:29.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:29.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:30.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:31.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:32.241[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:33.041[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:33.841[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:34.641[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:35.441[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:36.145[0;33m[WARNING][0m [torrent] engine: metadata not acquired within timeout
+14:28:36.149[0;33m[WARNING][0m [torrent] torrent session: open returned empty for 39916f69ab5c3338c559bdbf5b0eb4008e1e5bab
+14:28:36.203[0;32m[DEBUG][0m Adding an inputs block token (tokens=1)
+14:28:36.205[0;32m[DEBUG][0m Pushing VideoView (id="video") to the focus stack
+14:28:36.210[0;32m[DEBUG][0m Giving focus to brls::Button (id="brls/dialog/button1")
+14:28:36.217[0;32m[DEBUG][0m Hiding brls::Dialog
+14:28:36.221[0;32m[DEBUG][0m push activity to the stack
+14:28:36.226[0;32m[DEBUG][0m Showing brls::Dialog
+14:28:36.243[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:36.396[0;32m[DEBUG][0m Removing an inputs block token (tokens=0)
+14:28:37.043[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:37.843[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:38.643[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:39.443[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:40.243[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:41.043[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:41.843[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:42.643[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:43.443[0;32m[DEBUG][0m torrent buffering: meta=false peers=0/0 rate=0B/s pieces=0/0 contiguous=0B webseeds=0
+14:28:43.929[0;32m[DEBUG][0m Adding an inputs block token (tokens=1)
+14:28:43.936[0;32m[DEBUG][0m Hiding PlayerView
+14:28:43.938[0;32m[DEBUG][0m Showing PlayerView
+14:28:43.943[0;32m[DEBUG][0m Giving focus to VideoView (id="video"), and removing it from the focus stack
+14:28:43.946[0;32m[DEBUG][0m Giving focus to VideoView (id="video")
+14:28:43.955[0;32m[DEBUG][0m Hiding brls::Dialog
+14:28:44.147[0;32m[DEBUG][0m Adding an inputs block token (tokens=2)
+14:28:44.154[0;32m[DEBUG][0m Hiding brls::AppletFrame (id="main/frame")
+14:28:44.158[0;32m[DEBUG][0m Showing brls::AppletFrame (id="main/frame")
+14:28:44.161[0;32m[DEBUG][0m Giving focus to (anonymous namespace)::SourceRow (id="movie/source/3"), and removing it from the focus stack
+14:28:44.164[0;32m[DEBUG][0m Giving focus to (anonymous namespace)::SourceRow (id="movie/source/3")
+14:28:44.171[0;32m[DEBUG][0m Hiding PlayerView
+14:28:44.179[0;32m[DEBUG][0m Start delete top activity
+14:28:44.181[0;32m[DEBUG][0m Top activity deleted
+14:28:44.187[0;32m[DEBUG][0m Removing an inputs block token (tokens=1)
+14:28:44.191[0;32m[DEBUG][0m Start delete top activity
+14:28:44.195[0;32m[DEBUG][0m Top activity deleted
+14:28:44.205[0;32m[DEBUG][0m Removing an inputs block token (tokens=0)
+14:28:44.214[0;32m[DEBUG][0m trying delete PlayerView...
+14:28:44.218[0;32m[DEBUG][0m trying delete VideoView...
+14:28:44.226[0;32m[DEBUG][0m View VideoProfile: delete
+14:28:44.238[0;32m[DEBUG][0m delete AppletFrame brls::AppletFrame (id="brls/dialog/applet")
+14:28:44.252[0;32m[DEBUG][0m View HRecyclerFrame: create
+14:28:44.256[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:28:44.261[0;32m[DEBUG][0m HRecyclerFrame Cell #1 - added right
+14:28:44.265[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:28:44.272[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:28:44.275[0;32m[DEBUG][0m HRecyclerFrame Cell #2 - added right
+14:28:44.279[0;32m[DEBUG][0m View HRecyclerFrame: delete
+14:28:44.295[0;32m[DEBUG][0m View HRecyclerFrame: delete
+14:28:44.313[0;32m[DEBUG][0m View HRecyclerFrame: delete
+14:28:44.339[0;32m[DEBUG][0m View HRecyclerFrame: delete
+14:28:44.404[0;32m[DEBUG][0m View HRecyclerFrame: delete
+14:28:44.461[0;32m[DEBUG][0m View HRecyclerFrame: delete
+14:28:44.599[0;32m[DEBUG][0m View HRecyclerFrame: delete
+14:28:44.693[0;32m[DEBUG][0m HRecyclerFrame::onLayout reloadData()
+14:28:44.700[0;32m[DEBUG][0m HRecyclerFrame Cell #3 - added right
+14:28:46.177[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/movie/history.json: http status 500
+14:28:46.481[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/movie/watchlist.json: http status 500
+14:28:47.014[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/movie/collection.json: http status 500
+14:28:47.043[0;32m[DEBUG][0m Giving focus to (anonymous namespace)::SourceRow (id="movie/source/4")
+14:28:47.053[0;32m[DEBUG][0m Giving focus to AutoSidebarItem
+14:28:47.314[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/movie/recommendations.json: http status 500
+14:28:48.009[0;32m[DEBUG][0m Adding an inputs block token (tokens=1)
+14:28:48.012[0;32m[DEBUG][0m Pushing AutoSidebarItem to the focus stack
+14:28:48.017[0;32m[DEBUG][0m Giving focus to brls::Button (id="brls/dialog/button1")
+14:28:48.037[0;32m[DEBUG][0m Hiding brls::Dialog
+14:28:48.041[0;32m[DEBUG][0m push activity to the stack
+14:28:48.044[0;32m[DEBUG][0m Showing brls::Dialog
+14:28:48.181[0;32m[DEBUG][0m Removing an inputs block token (tokens=0)
+14:28:48.744[0;32m[DEBUG][0m Giving focus to brls::Button (id="brls/dialog/button2")
+14:28:48.770[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/series/history.json: http status 500
+14:28:49.031[0;32m[DEBUG][0m Adding an inputs block token (tokens=1)
+14:28:49.034[0;32m[DEBUG][0m Hiding brls::AppletFrame (id="main/frame")
+14:28:49.037[0;32m[DEBUG][0m Showing brls::AppletFrame (id="main/frame")
+14:28:49.046[0;32m[DEBUG][0m Giving focus to AutoSidebarItem, and removing it from the focus stack
+14:28:49.048[0;32m[DEBUG][0m Giving focus to AutoSidebarItem
+14:28:49.054[0;32m[DEBUG][0m Hiding brls::Dialog
+14:28:49.243[0;32m[DEBUG][0m Start delete top activity
+14:28:49.247[0;32m[DEBUG][0m Top activity deleted
+14:28:49.259[0;32m[DEBUG][0m Removing an inputs block token (tokens=0)
+14:28:49.265[0;32m[DEBUG][0m delete AppletFrame brls::AppletFrame (id="brls/dialog/applet")
+14:28:49.274[0;34m[INFO][0m trying free mpv context
+14:28:49.281[0;34m[INFO][0m trying terminate mpv
+14:28:49.287[0;34m[INFO][0m Exiting...
+14:28:49.291[0;32m[DEBUG][0m delete AppletFrame brls::AppletFrame (id="main/frame")
+14:28:49.296[0;32m[DEBUG][0m delete AutoTabFrame
+14:28:49.300[0;32m[DEBUG][0m del AutoSidebarItem: 
+14:28:49.304[0;32m[DEBUG][0m View HomeTab: delete
+14:28:49.312[0;32m[DEBUG][0m delete AttachedView
+14:28:49.314[0;32m[DEBUG][0m View HRecyclerFrame: delete
+14:28:49.326[0;32m[DEBUG][0m del AutoSidebarItem: 
+14:28:49.329[0;32m[DEBUG][0m delete AttachedView
+14:28:49.331[0;32m[DEBUG][0m delete AutoTabFrame
+14:28:49.334[0;32m[DEBUG][0m del AutoSidebarItem: Popular
+14:28:49.337[0;32m[DEBUG][0m View RecyclingGrid: delete
+14:28:49.393[0;32m[DEBUG][0m del AutoSidebarItem: New
+14:28:49.398[0;32m[DEBUG][0m del AutoSidebarItem: Featured
+14:28:49.403[0;32m[DEBUG][0m del AutoSidebarItem: Trakt History
+14:28:49.408[0;32m[DEBUG][0m del AutoSidebarItem: Trakt Watchlist
+14:28:49.414[0;32m[DEBUG][0m del AutoSidebarItem: Trakt Collection
+14:28:49.421[0;32m[DEBUG][0m del AutoSidebarItem: Trakt Recommendations
+14:28:49.425[0;32m[DEBUG][0m del AutoSidebarItem: Genres
+14:28:49.436[0;32m[DEBUG][0m del AutoSidebarItem: 
+14:28:49.439[0;32m[DEBUG][0m del AutoSidebarItem: 
+14:28:49.444[0;32m[DEBUG][0m del AutoSidebarItem: 
+14:28:49.448[0;32m[DEBUG][0m del AutoSidebarItem: 
+14:28:49.453[0;32m[DEBUG][0m del AutoSidebarItem: 
+14:28:49.457[0;32m[DEBUG][0m del AutoSidebarItem: 
+14:28:49.530[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/series/watchlist.json: http status 500
+14:28:50.044[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/series/collection.json: http status 500
+14:28:50.343[0;33m[WARNING][0m stremio home catalog https://www.strem.io/trakt/addon/5efba1e44a7b61002583b900/catalog/series/recommendations.json: http status 500
+14:28:50.886[0;32m[DEBUG][0m curl cleanup

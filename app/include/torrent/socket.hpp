@@ -96,8 +96,8 @@ private:
     Handle fd = invalidHandle();
 };
 
-/// select()-based readiness poll for the event loop. libnx and openorbis both
-/// expose select(); Vita has sceNetSelect with the same shape.
+/// Readiness poll for the event loop, built on poll(2) (NOT select — Switch
+/// fds are newlib handles that exceed newlib's FD_SETSIZE=64; see socket.cpp).
 struct PollItem {
     Handle fd;
     bool wantRead = false;

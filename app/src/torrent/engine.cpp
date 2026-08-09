@@ -53,8 +53,10 @@ std::string TorrentEngine::open(const std::string& magnetOrInfoHash, int fileIdx
     announcerThread_ = std::thread([this] { announcerLoop(); });
 
     // Magnet flow: the local URL only exists once metadata is in hand (we need
-    // the file length). Block up to 60 s; the caller may also poll waitForMetadata.
-    if (!waitForMetadata(60000)) {
+    // the file length). Block up to 90 s (cold-DHT magnets on console can exceed
+    // a minute before the first metadata-capable peer lands); the caller may also
+    // poll waitForMetadata.
+    if (!waitForMetadata(90000)) {
         logWarn("engine: metadata not acquired within timeout");
         return "";
     }

@@ -38,6 +38,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <poll.h>
 #include <signal.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -363,7 +364,7 @@ bool globalInit() {
     // the forwarder title takeover grants. That budget comfortably covers the
     // engine's console peer cap (EngineConfig::maxPeers, 8-16) plus curl and the
     // loopback HTTP server; 12 BSD sessions is ample concurrency for our
-    // non-blocking select() peer loop alongside the blocking curl / HTTP-server
+    // non-blocking poll() peer loop alongside the blocking curl / HTTP-server
     // threads. If a future profile needs more, the fix belongs in borealis'
     // switch_wrapper.c (via scripts/patches/borealis-fixes.patch), NOT a concurrent
     // init here.
@@ -555,34 +556,47 @@ void UdpSocket::close() {
 // ---- poll -------------------------------------------------------------------
 
 int poll(std::vector<PollItem>& items, int timeoutMs) {
-    // POSIX / Switch (libnx bsd) / PS4 (openorbis FreeBSD) all expose select().
-    // Vita has no select() and uses sceNetEpoll* — see the #elif __vita__ poll().
-    fd_set rfds, wfds, efds;
-    FD_ZERO(&rfds);
-    FD_ZERO(&wfds);
-    FD_ZERO(&efds);
-    int maxfd = -1;
-    for (auto& it : items) {
-        it.readable = it.writable = it.error = false;
-        if (it.fd < 0) continue;
-        if (it.wantRead) FD_SET(it.fd, &rfds);
-        if (it.wantWrite) FD_SET(it.fd, &wfds);
-        FD_SET(it.fd, &efds);
-        if (it.fd > maxfd) maxfd = it.fd;
+    // POSIX / Switch (libnx bsd) / PS4 (openorbis FreeBSD) all expose poll().
+    // Vita has no poll() and uses sceNetEpoll* — see the #elif __vita__ poll().
+    //
+    // poll(), NOT select(): on Switch the fds are newlib devoptab handles shared
+    // with every open file (romfs / SD cache / fonts / mpv), so socket fds land
+    // well above devkitPro newlib's FD_SETSIZE=64 — select() returned EINVAL on
+    // every call (and FD_SET(fd>=64) wrote out of bounds), silently killing the
+    // whole event loop (no handshakes, no DHT/µTP datagrams, no playback).
+    // libnx poll() maps newlib->bsd fds correctly with no fd-number limit;
+    // desktop/openorbis poll() is standard. PollItem fds here are always sockets.
+    for (auto& it : items) it.readable = it.writable = it.error = false;
+
+    std::vector<struct pollfd> pfds;
+    std::vector<size_t> index;
+    pfds.reserve(items.size());
+    index.reserve(items.size());
+    for (size_t i = 0; i < items.size(); i++) {
+        if (items[i].fd < 0) continue;
+        struct pollfd p;
+        std::memset(&p, 0, sizeof(p));
+        p.fd = items[i].fd;
+        if (items[i].wantRead) p.events |= POLLIN;
+        if (items[i].wantWrite) p.events |= POLLOUT;
+        pfds.push_back(p);
+        index.push_back(i);
     }
-    if (maxfd < 0) {
-        // Nothing to wait on; emulate the timeout with a short sleep-free return.
+    if (pfds.empty()) {
+        // Nothing to wait on; emulate the timeout with a zero-fd select sleep
+        // (nfds=0 — no fd_set involvement, safe everywhere).
         struct timeval tv{timeoutMs / 1000, (timeoutMs % 1000) * 1000};
         return ::select(0, nullptr, nullptr, nullptr, &tv);
     }
-    struct timeval tv{timeoutMs / 1000, (timeoutMs % 1000) * 1000};
-    int r = ::select(maxfd + 1, &rfds, &wfds, &efds, &tv);
+    int r = ::poll(pfds.data(), (nfds_t)pfds.size(), timeoutMs);
     if (r <= 0) return r;
-    for (auto& it : items) {
-        if (it.fd < 0) continue;
-        it.readable = FD_ISSET(it.fd, &rfds);
-        it.writable = FD_ISSET(it.fd, &wfds);
-        it.error = FD_ISSET(it.fd, &efds);
+    for (size_t j = 0; j < pfds.size(); j++) {
+        PollItem& it = items[index[j]];
+        // POLLHUP counts as readable: recv() then returns 0 and the caller sees
+        // the close through its normal error path (same as the old exceptfds set).
+        it.readable = (pfds[j].revents & (POLLIN | POLLHUP)) != 0;
+        it.writable = (pfds[j].revents & POLLOUT) != 0;
+        it.error = (pfds[j].revents & POLLERR) != 0;
     }
     return r;
 }

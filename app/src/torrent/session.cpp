@@ -53,6 +53,24 @@ std::string buildMagnet(const std::string& infoHash, const std::vector<std::stri
     return magnet;
 }
 
+/// Per-platform engine tuning (EngineConfig defaults target desktop — see
+/// types.hpp). The consoles dial the swarm down: fewer concurrent peers
+/// (console bsd sessions / CPU) and a smaller RAM sliding window. Switch runs
+/// under the forwarder's title takeover (~3.2 GiB) but 64 MiB also survives an
+/// applet-mode launch (~442 MiB) where mpv + borealis already take most of the
+/// budget. Vita is the tightest (H.264-only, 512 MiB shared with everything).
+EngineConfig platformConfig() {
+    EngineConfig cfg;
+#if defined(__SWITCH__)
+    cfg.maxPeers = 16;                          // console: 8-16 (types.hpp)
+    cfg.ramBudgetBytes = 64 * 1024 * 1024;      // console: 32-64 MiB (types.hpp)
+#elif defined(__vita__)
+    cfg.maxPeers = 8;
+    cfg.ramBudgetBytes = 32 * 1024 * 1024;
+#endif
+    return cfg;
+}
+
 }  // namespace
 
 EngineSession& EngineSession::instance() {
@@ -70,7 +88,7 @@ std::string EngineSession::open(const std::string& infoHash, int fileIdx, const 
     close();
     joinPending();
 
-    auto engine = std::make_shared<TorrentEngine>(EngineConfig{});
+    auto engine = std::make_shared<TorrentEngine>(platformConfig());
     // Publish before the (blocking) open() so close()/stats() can reach it.
     {
         std::lock_guard<std::mutex> lk(mutex_);

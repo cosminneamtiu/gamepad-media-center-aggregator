@@ -37,6 +37,10 @@
 #include "tab/playlists_tab.hpp"
 #include "tab/watchlist_tab.hpp"
 
+#if defined(ENABLE_TORRENT)
+#include "torrent/log.hpp"
+#endif
+
 #if defined(__SDL2__)
 #include <SDL2/SDL_main.h>
 #endif
@@ -112,6 +116,21 @@ int main(int argc, char* argv[]) {
             items.push_back(argv[i]);
         }
     }
+
+#if defined(ENABLE_TORRENT)
+    // Route the torrent engine's logs into brls::Logger — plain stderr is
+    // invisible on consoles, and this lets the existing `-o file.log` capture /
+    // nxlink stdio cover the announce / DHT / peer diagnostics too. The message
+    // arrives already formatted: pass it as an argument, never as a format string.
+    torrent::setLogSink([](torrent::LogLevel level, const std::string& msg) {
+        switch (level) {
+        case torrent::LogLevel::Debug: brls::Logger::debug("[torrent] {}", msg); break;
+        case torrent::LogLevel::Info: brls::Logger::info("[torrent] {}", msg); break;
+        case torrent::LogLevel::Warning: brls::Logger::warning("[torrent] {}", msg); break;
+        case torrent::LogLevel::Error: brls::Logger::error("[torrent] {}", msg); break;
+        }
+    });
+#endif
 
     std::setlocale(LC_ALL, "C.UTF-8");
     // Load cookies and settings

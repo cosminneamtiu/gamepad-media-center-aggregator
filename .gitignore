@@ -23,7 +23,7 @@ debian/.debhelper
 /jniLibs/
 plezy/
 .prod.keys.tmp
-
+.log
 # Brand: raw device mockups kept locally (site ships derivatives under site/assets/img/)
 /brand/mockups/
 # Redesign / feature scratch, kept locally out of the repo

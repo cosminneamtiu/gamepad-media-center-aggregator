@@ -10,6 +10,7 @@
 #include "torrent/socket.hpp"
 
 #include "torrent/log.hpp"
+#include "torrent/util.hpp"
 
 #if defined(__vita__)
 // PS Vita: SceNet is NOT BSD — it has its own API (sceNet*) and a memory pool.
@@ -589,7 +590,16 @@ int poll(std::vector<PollItem>& items, int timeoutMs) {
         return ::select(0, nullptr, nullptr, nullptr, &tv);
     }
     int r = ::poll(pfds.data(), (nfds_t)pfds.size(), timeoutMs);
-    if (r <= 0) return r;
+    if (r < 0) {
+        static int64_t lastLogMs = 0;
+        int64_t now = nowMs();
+        if (now - lastLogMs > 5000) {
+            lastLogMs = now;
+            logError("net::poll failed (errno=%d, fds=%zu)", errno, pfds.size());
+        }
+        return r;
+    }
+    if (r == 0) return 0;
     for (size_t j = 0; j < pfds.size(); j++) {
         PollItem& it = items[index[j]];
         // POLLHUP counts as readable: recv() then returns 0 and the caller sees

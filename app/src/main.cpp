@@ -122,6 +122,8 @@ int main(int argc, char* argv[]) {
     // invisible on consoles, and this lets the existing `-o file.log` capture /
     // nxlink stdio cover the announce / DHT / peer diagnostics too. The message
     // arrives already formatted: pass it as an argument, never as a format string.
+    // Engine threads (announcer, peer loop) call this sink, so locking must be on.
+    brls::Logger::setThreadSafeLogging(true);
     torrent::setLogSink([](torrent::LogLevel level, const std::string& msg) {
         switch (level) {
         case torrent::LogLevel::Debug: brls::Logger::debug("[torrent] {}", msg); break;

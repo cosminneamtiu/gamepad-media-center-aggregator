@@ -13,6 +13,7 @@
 #include <cctype>
 
 #include "torrent/engine.hpp"
+#include "torrent/log.hpp"
 
 namespace torrent {
 
@@ -84,6 +85,7 @@ EngineSession::~EngineSession() {
 }
 
 std::string EngineSession::open(const std::string& infoHash, int fileIdx, const std::vector<std::string>& sources) {
+    logInfo("torrent session: opening %s (fileIdx=%d)", infoHash.c_str(), fileIdx);
     // One playback at a time: finish tearing down any previous engine first.
     close();
     joinPending();
@@ -101,6 +103,7 @@ std::string EngineSession::open(const std::string& infoHash, int fileIdx, const 
     // object alive across that race.
     std::string url = engine->open(buildMagnet(infoHash, sources), fileIdx);
     if (url.empty()) {
+        logWarn("torrent session: open returned empty for %s", infoHash.c_str());
         {
             std::lock_guard<std::mutex> lk(mutex_);
             if (engine_ == engine) engine_.reset();
@@ -108,6 +111,7 @@ std::string EngineSession::open(const std::string& infoHash, int fileIdx, const 
         engine->close();
         return "";
     }
+    logInfo("torrent session: ready %s", url.c_str());
     return url;
 }
 

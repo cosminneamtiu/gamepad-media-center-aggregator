@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "../app/src/torrent/log.cpp"
+#include "../app/src/torrent/util.cpp"
 #include "../app/src/torrent/socket.cpp"
 
 using namespace torrent;

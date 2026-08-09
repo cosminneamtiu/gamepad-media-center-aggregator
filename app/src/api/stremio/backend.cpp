@@ -244,6 +244,16 @@ std::vector<media::Media> resolveAllStreams(
                   }),
         all.end());
 #endif
+#if defined(__SWITCH__)
+    // Nintendo Switch: keep 1080p and below only. 4K/2160p and 1440p streams are
+    // filtered out so the source picker never offers them, saving bandwidth/RAM
+    // and matching the user's preference for the console swarm.
+    all.erase(std::remove_if(all.begin(), all.end(),
+                  [](const media::Media& m) {
+                      return m.videoResolution == "4K" || m.videoResolution == "1440p";
+                  }),
+        all.end());
+#endif
     std::stable_sort(all.begin(), all.end(), [](const media::Media& x, const media::Media& y) {
         if (x.playable() != y.playable()) return x.playable();  // playable first
 #if defined(__PSV__)

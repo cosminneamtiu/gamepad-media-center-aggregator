@@ -587,9 +587,9 @@ void PlayerView::updateTorrentLoading() {
 
     // Buffering diagnostics (also the proof-of-refresh trace asked for by the spec).
     brls::Logger::debug(
-        "torrent buffering: meta={} peers={}/{} rate={:.0f}B/s pieces={}/{} contiguous={}B webseeds={}",
-        st.metadataReady, st.peersConnected, st.peersKnown, st.downloadRateBps, st.piecesHave, st.piecesTotal,
-        st.contiguousReadyBytes, st.webSeeds);
+        "torrent buffering: meta={} peers={}/{} dht={} rate={:.0f}B/s pieces={}/{} contiguous={}B webseeds={}",
+        st.metadataReady, st.peersConnected, st.peersKnown, st.dhtNodes, st.downloadRateBps, st.piecesHave,
+        st.piecesTotal, st.contiguousReadyBytes, st.webSeeds);
 }
 
 void PlayerView::hideTorrentLoading() {

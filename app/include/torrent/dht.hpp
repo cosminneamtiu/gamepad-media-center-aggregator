@@ -112,6 +112,10 @@ private:
 
     InfoHash searchHash_{};
     bool haveSearch_ = false;
+    bool searchPending_ = false;       // search() requested but not yet issued to jech/dht
+    bool searchHasYielded_ = false;    // onValues() delivered at least one peer
+    bool searchDeferLogged_ = false;   // prevents repeated "search queued" logs
+    int searchRetryCount_ = 0;         // backoff index while !searchHasYielded_
     int64_t lastSearchMs_ = 0;
     int64_t nextPeriodicMs_ = 0;
 
@@ -120,6 +124,12 @@ private:
     std::mutex bootstrapMutex_;
     std::vector<PeerAddr> pendingBootstrap_;
     bool bootstrapDone_ = false;
+
+    /// Actually call dht_search (loop thread only).
+    void issueSearch();
+
+    /// Backoff interval while the search has not yet yielded peers.
+    static int64_t searchRetryIntervalMs(int attempt);
 };
 
 }  // namespace torrent

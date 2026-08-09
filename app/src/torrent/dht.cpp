@@ -283,6 +283,10 @@ void DhtManager::stop() {
     peersFn_ = nullptr;
     udp_.close();  // after dht_uninit (order-safe even though uninit does no I/O)
     haveSearch_ = false;
+    searchPending_ = false;
+    searchHasYielded_ = false;
+    searchDeferLogged_ = false;
+    searchRetryCount_ = 0;
     std::lock_guard<std::mutex> lk(bootstrapMutex_);
     pendingBootstrap_.clear();
     bootstrapDone_ = false;
@@ -320,15 +324,37 @@ void DhtManager::resolveBootstrap() {
 
 void DhtManager::search(const InfoHash& infoHash) {
     if (!active_) return;
+    bool hashChanged = searchHash_ != infoHash;
     searchHash_ = infoHash;
     haveSearch_ = true;
+    searchPending_ = true;
+    searchHasYielded_ = false;
+    searchDeferLogged_ = false;
+    if (hashChanged) searchRetryCount_ = 0;
+    lastSearchMs_ = nowMs();
+}
+
+void DhtManager::issueSearch() {
+    if (!active_ || !haveSearch_) return;
+    searchPending_ = false;
+    searchDeferLogged_ = false;
     lastSearchMs_ = nowMs();
     // port = 0: search only, do not announce ourselves (we are a leech and ephemeral).
-    int rc = dht_search(infoHash.data(), 0, AF_INET, &gmcaDhtEvent, this);
+    int rc = dht_search(searchHash_.data(), 0, AF_INET, &gmcaDhtEvent, this);
     if (rc < 0)
         logWarn("dht: dht_search failed (errno %d)", errno);
     else
-        logInfo("dht: search %s (%s)", toHex(infoHash).c_str(), rc == 1 ? "new" : "refreshed");
+        logInfo("dht: search %s (%s)", toHex(searchHash_).c_str(), rc == 1 ? "new" : "refreshed");
+}
+
+int64_t DhtManager::searchRetryIntervalMs(int attempt) {
+    // 5 -> 10 -> 15 -> 20 -> 30 s, then cap. Keeps the search alive when the
+    // routing table is still warming up, without hammering the network.
+    static const int64_t kIntervals[] = {5000, 10000, 15000, 20000, 30000};
+    if (attempt < 0) attempt = 0;
+    constexpr int kMax = sizeof(kIntervals) / sizeof(kIntervals[0]) - 1;
+    if (attempt > kMax) attempt = kMax;
+    return kIntervals[attempt];
 }
 
 void DhtManager::serviceReadable() {
@@ -367,8 +393,31 @@ void DhtManager::periodic(int64_t now) {
         }
     }
 
-    // Keep the search fresh (jech merges a re-issue with the in-progress search).
-    if (haveSearch_ && now - lastSearchMs_ > 120000) search(searchHash_);
+    // Issue or refresh the search. The first issue is deferred until at least one
+    // bootstrap node has responded and entered the routing table — issuing
+    // dht_search against an empty table can stall until the 120 s refresh. A 10 s
+    // safety valve issues the search anyway so very slow bootstrap does not hang us.
+    if (haveSearch_) {
+        if (searchPending_) {
+            int nodes = nodeCount();
+            if (nodes > 0) {
+                logInfo("dht: routing table has %d node(s), issuing search", nodes);
+                issueSearch();
+            } else if (now - lastSearchMs_ > 10000) {
+                logInfo("dht: no routing-table nodes after 10 s, issuing search anyway");
+                issueSearch();
+            } else if (!searchDeferLogged_) {
+                logInfo("dht: search queued, waiting for routing-table nodes");
+                searchDeferLogged_ = true;
+            }
+        } else if (now - lastSearchMs_ > (searchHasYielded_ ? 120000 : searchRetryIntervalMs(searchRetryCount_))) {
+            logDebug("dht: re-issuing search (yielded=%s retry=%d interval=%lldms)",
+                searchHasYielded_ ? "yes" : "no", searchRetryCount_,
+                searchHasYielded_ ? 120000LL : searchRetryIntervalMs(searchRetryCount_));
+            issueSearch();
+            if (!searchHasYielded_) ++searchRetryCount_;
+        }
+    }
 
     // Pump timers on the cadence jech asked for, or right after bootstrap pings.
     if (now >= nextPeriodicMs_ || !boot.empty()) pump(nullptr, 0, std::string(), 0);
@@ -392,6 +441,7 @@ void DhtManager::onValues(const uint8_t* data, size_t len) {
     }
     if (peers.empty()) return;
     logInfo("dht: search yielded %d peer(s)", (int)peers.size());
+    searchHasYielded_ = true;
     peersFn_(peers);
 }
 

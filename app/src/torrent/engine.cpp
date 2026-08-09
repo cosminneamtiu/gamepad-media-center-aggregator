@@ -190,8 +190,9 @@ void TorrentEngine::initDht() {
         dhtMgr_.reset();  // UDP/jech-dht unavailable -> engine keeps trackers/PEX/µTP
         return;
     }
-    // Kick the search now (caller thread, strictly before the loop spawns — same
-    // happens-before discipline as dht_init). The loop then pumps it via periodic().
+    // Queue the search now (caller thread, strictly before the loop spawns — same
+    // happens-before discipline as dht_init). DhtManager defers the actual dht_search
+    // until the bootstrap nodes have populated the routing table.
     dhtMgr_->search(infoHash_);
 }
 
